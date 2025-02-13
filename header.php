@@ -16,7 +16,7 @@ if (session_status() === PHP_SESSION_NONE) {
 <header class="header">
     <div class="container1">
         <div class="logo">
-            <img src="img/logo.png" alt="Homely bakes">
+            <img src="img/logo.png" alt="Homely Bakes">
         </div>
         <nav class="nav">
             <a href="index.php">Home</a>
@@ -25,12 +25,11 @@ if (session_status() === PHP_SESSION_NONE) {
             <a href="contact.php">Contact</a>
             
             <div class="auth-section">
-                <?php if(!isset($_SESSION['logged_in'])): ?>
+                <?php if (!isset($_SESSION['logged_in'])): ?>
                     <!-- Show when logged out -->
                     <div class="login-container">
                         <button class="login-button" id="login-button" onclick="redirectToLogin()">Login</button>
                     </div>
-                       
                     
                     <div class="signup-container">
                         <button class="signup-button" id="sign-button">SignUp</button>
@@ -47,18 +46,31 @@ if (session_status() === PHP_SESSION_NONE) {
                             <span class="username"><?php echo htmlspecialchars($_SESSION['firstname']); ?></span>
                             <i class="fas fa-chevron-down"></i>
                         </button>
+                        
                         <div class="profile-dropdown">
-                            <a href="profile.php" class="profile-link">
-                                <i class="fas fa-user"></i> Profile
-                            </a>
-                            <?php if($_SESSION['user_type'] === 'baker'): ?>
-                                <a href="baker/" class="profile-link">
+                            <?php if ($_SESSION['user_type'] === '0'): ?>
+                                <!-- Baker Links -->
+                                <a href="/baker/baker_profile.php" class="profile-link">
+                                    <i class="fas fa-user"></i> Profile
+                                </a>
+                                <a href="/baker/baker_dashboard.php" class="profile-link">
                                     <i class="fas fa-store"></i> Dashboard
                                 </a>
+                            <?php elseif ($_SESSION['user_type'] === '1'): ?>
+                                <!-- Customer Links -->
+                                <a href="/profile.php" class="profile-link">
+                                    <i class="fas fa-user"></i> Profile
+                                </a>
+                                <a href="/orders.php" class="profile-link">
+                                    <i class="fas fa-shopping-cart"></i> My Orders
+                                </a>
                             <?php endif; ?>
-                            <a href="logout.php" class="profile-link logout-link">
+                            
+                            <!-- Logout Link -->
+                            <a href="/homelybakes/logout.php" class="profile-link logout-link">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
+
                         </div>
                     </div>
                 <?php endif; ?>

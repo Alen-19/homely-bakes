@@ -130,3 +130,23 @@ function rejectOrder(orderId) {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const fileInput = document.getElementById('profile_image');
+    const previewImage = document.getElementById('profile-preview');
+
+    fileInput.addEventListener('change', function () {
+        const file = fileInput.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewImage.style.display = 'none';
+        }
+    });
+});

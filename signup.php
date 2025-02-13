@@ -1,68 +1,113 @@
 <?php
-
 session_start();
 include 'connect.php';
+
 // Retrieve user type from URL or session
-if (isset($_GET['type']) && !empty($_GET['type'])) {
-    $userType = $_GET['type'];
-    $_SESSION['user_type'] = $userType; // Store in session
+if (isset($_GET['type']) && $_GET['type'] !== '') {
+    $numericType = $_GET['type'];
+    // Convert numeric type to string representation
+    $userType = ($numericType == 0) ? 'Baker' : 'Customer';
+    $_SESSION['user_type'] = $userType; // Store string type in session
+    $_SESSION['numeric_type'] = $numericType; // Store numeric type for database
 } elseif (isset($_SESSION['user_type']) && !empty($_SESSION['user_type'])) {
     $userType = $_SESSION['user_type'];
+    $numericType = ($userType == 'Baker') ? 0 : 1;
 } else {
     // Redirect to signup.php if user_type is not set
     header("Location: signup.php");
-    exit(); // Make sure no further code is executed after redirection
+    exit();
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Validate and sanitize input
+    $firstName = mysqli_real_escape_string($conn, trim($_POST['firstName']));
+    $lastName = mysqli_real_escape_string($conn, trim($_POST['lastName']));
+    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
+    $mobileNumber = mysqli_real_escape_string($conn, trim($_POST['mobileNumber']));
+    $streetAddress = mysqli_real_escape_string($conn, trim($_POST['streetAddress']));
+    $city = mysqli_real_escape_string($conn, trim($_POST['city']));
+    $district = mysqli_real_escape_string($conn, trim($_POST['district']));
+    $state = mysqli_real_escape_string($conn, trim($_POST['state']));
+    $country = mysqli_real_escape_string($conn, trim($_POST['country']));
+    $pincode = mysqli_real_escape_string($conn, trim($_POST['pincode']));
+    $password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
+
+    // First, check if email already exists
+    $check_email = "SELECT email FROM table_login WHERE email = ?";
+    $stmt_check = $conn->prepare($check_email);
+    $stmt_check->bind_param("s", $email);
+    $stmt_check->execute();
+    $result = $stmt_check->get_result();
     
-    $firstName = mysqli_real_escape_string($conn, $_POST['firstName']);
-    $lastName = mysqli_real_escape_string($conn, $_POST['lastName']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $mobileNumber = mysqli_real_escape_string($conn, $_POST['mobileNumber']);
-    $streetAddress = mysqli_real_escape_string($conn, $_POST['streetAddress']);
-    $city = mysqli_real_escape_string($conn, $_POST['city']);
-    $district = mysqli_real_escape_string($conn, $_POST['district']);
-    $state = mysqli_real_escape_string($conn, $_POST['state']);
-    $country = mysqli_real_escape_string($conn, $_POST['country']);
-    $pincode = mysqli_real_escape_string($conn, $_POST['pincode']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    if ($result->num_rows > 0) {
+        $_SESSION['error'] = "Email already exists!";
+    } else {
+        // Start transaction
+        mysqli_autocommit($conn, FALSE);
+        $success = true;
 
-    // Insert data into table_registration
-    $sql_registration = "INSERT INTO table_registration ( first_name, last_name, mobile_number, 
-            street_address, city, district, state, country, pincode) 
-            VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Insert into table_registration first
+        $sql_registration = "INSERT INTO table_registration (first_name, last_name, mobile_number, 
+                street_address, city, district, state, country, pincode) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    $stmt_registration = $conn->prepare($sql_registration);
-    $stmt_registration->bind_param("sssssssss", $firstName, $lastName, $mobileNumber, 
-                                    $streetAddress, $city, $district, $state, $country, $pincode);
+        if ($stmt_registration = $conn->prepare($sql_registration)) {
+            $stmt_registration->bind_param("sssssssss", 
+                $firstName, $lastName, $mobileNumber, $streetAddress, 
+                $city, $district, $state, $country, $pincode
+            );
 
-    if ($stmt_registration->execute()) {
-        // Get the last inserted user_id
-        $user_id = $conn->insert_id;
+            if (!$stmt_registration->execute()) {
+                $success = false;
+                $_SESSION['error'] = "Registration Error: " . $stmt_registration->error;
+            }
+        } else {
+            $success = false;
+            $_SESSION['error'] = "Preparation Error: " . $conn->error;
+        }
 
-        // Insert data into table_login
-        $sql_login = "INSERT INTO table_login (user_type,user_id, email, password) VALUES (?, ?, ?, ?)";
-        $stmt_login = $conn->prepare($sql_login);
-        $stmt_login->bind_param("siss",$userType, $user_id, $email, $password);
+        // If registration successful, proceed with login table insertion
+        if ($success) {
+            $user_id = $conn->insert_id;
+            
+            $sql_login = "INSERT INTO table_login (user_type, user_id, email, password) 
+                         VALUES (?, ?, ?, ?)";
+            
+            if ($stmt_login = $conn->prepare($sql_login)) {
+                $stmt_login->bind_param("iiss", $numericType, $user_id, $email, $password);
+                
+                if (!$stmt_login->execute()) {
+                    $success = false;
+                    $_SESSION['error'] = "Login Error: " . $stmt_login->error;
+                }
+            } else {
+                $success = false;
+                $_SESSION['error'] = "Login Preparation Error: " . $conn->error;
+            }
+        }
 
-        if ($stmt_login->execute()) {
+        // Commit or rollback based on success
+        if ($success) {
+            mysqli_commit($conn);
             $_SESSION['success'] = "Registration successful! Please login.";
             header("Location: login.php");
             exit();
         } else {
-            $_SESSION['error'] = "Error: " . $stmt_login->error;
+            mysqli_rollback($conn);
         }
 
-        $stmt_login->close();
-    } else {
-        $_SESSION['error'] = "Error: " . $stmt_registration->error;
+        // Reset autocommit to true
+        mysqli_autocommit($conn, TRUE);
+
+        // Close statements
+        if (isset($stmt_registration)) $stmt_registration->close();
+        if (isset($stmt_login)) $stmt_login->close();
+        if (isset($stmt_check)) $stmt_check->close();
     }
-
-    $stmt_registration->close();
 }
-?>
 
+// Rest of the HTML code remains exactly the same...
+?>
 
 <!DOCTYPE html>
 <html>
@@ -112,7 +157,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="form-section">
                 <h3>Address Information</h3>
                 <div class="form-group">
-                    <label for="streetAddress">Street Address</label>
+                    <label for="streetAddress">Street Address/House Name</label>
                     <input type="text" id="streetAddress" name="streetAddress" required>
                     <span class="error-message"></span>
                 </div>

@@ -15,13 +15,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (bakerBtn) {
             bakerBtn.addEventListener('click', function() {
-                window.location.href = 'signup.php?type=baker';
+                window.location.href = 'signup.php?type=0';
             });
         }
 
         if (customerBtn) {
             customerBtn.addEventListener('click', function() {
-                window.location.href = 'signup.php?type=customer';
+                window.location.href = 'signup.php?type=1';
             });
         }
     }

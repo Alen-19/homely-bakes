@@ -1,0 +1,153 @@
+/* Global Styles */
+:root {
+    --primary-color: #e07a5f;
+    --secondary-color: #3d405b;
+    --background-color: #f4f1de;
+    --success-color: #81b29a;
+    --error-color: #e07a5f;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+    color: var(--secondary-color);
+    line-height: 1.6;
+}
+
+/* Profile Card Styles */
+.profile-card {
+    max-width: 800px;
+    margin: 150px auto;
+    padding: 40px;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.profile-card h1 {
+    color: var(--secondary-color);
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 2.2em;
+    font-weight: 600;
+}
+
+/* Form Styles */
+.input-group {
+    margin-bottom: 25px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--secondary-color);
+}
+
+.input-group input[type="text"],
+.input-group textarea,
+.input-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.input-group input[type="file"] {
+    width: 100%;
+    padding: 10px 0;
+}
+
+.input-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.input-group input:focus,
+.input-group textarea:focus,
+.input-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Button Styles */
+button[type="submit"] {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 14px 28px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background-color: #d0694e;
+}
+
+/* Error Message Styles */
+.error-message {
+    background-color: #fde8e8;
+    color: var(--error-color);
+    padding: 12px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid #fad2d2;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .profile-card {
+        margin: 20px;
+        padding: 20px;
+    }
+    
+    .profile-card h1 {
+        font-size: 1.8em;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Custom Select Styling */
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%233d405b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px !important;
+}
+
+/* File Input Styling */
+input[type="file"]::file-selector-button {
+    background-color: var(--secondary-color);
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.3s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: #2d2f44;
+}

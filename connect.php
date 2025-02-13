@@ -1,7 +1,7 @@
 <?php
    $servername="localhost";
    $username= "root";
-   $password= "Alen#&2004";
+   $password= "";
    $dbname= "homely_bakes";
    $conn = new mysqli($servername, $username, $password,$dbname);
    if ($conn->connect_error) {
