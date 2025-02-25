@@ -20,7 +20,7 @@
     <div class="hero-content">
         <h2>Discover the Joy of Homemade <br> Baking</h2>
         <p>Find the best homemade bakers near you.</p>
-        <a href="login.php"><button id="explor-now">Explore Now</button></a>
+        <a href="product.php"><button id="explor-now">Explore Now</button></a>
     
     </div>
 </section>

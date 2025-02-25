@@ -2,6 +2,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     loadProducts();
     
+    // Add to cart functionality
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            addToCart(productId);
+        });
+    });
+
     const searchButton = document.getElementById('search-button');
     const searchInput = document.getElementById('search-input');
     const filterOptions = document.getElementById('filter-options');
@@ -15,22 +23,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function loadProducts() {
-    fetch('get_products.php')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(products => displayProducts(products))
-        .catch(error => {
-            console.error('Error:', error);
-            const productsGrid = document.getElementById('products-grid');
-            if (productsGrid) {
-                productsGrid.innerHTML = '<p class="error">Error loading products. Please try again later.</p>';
-            }
-        });
+function addToCart(productId) {
+    fetch('add_to_cart.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `product_id=${productId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Product added to cart!');
+            // You can update cart count here if needed
+        } else {
+            alert(data.message || 'Error adding product to cart');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding product to cart. Please try again.');
+    });
 }
 
 function searchProducts(searchTerm, category) {
@@ -39,21 +52,7 @@ function searchProducts(searchTerm, category) {
         category: category
     });
     
-    fetch(`get_products.php?${params.toString()}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(products => displayProducts(products))
-        .catch(error => {
-            console.error('Error:', error);
-            const productsGrid = document.getElementById('products-grid');
-            if (productsGrid) {
-                productsGrid.innerHTML = '<p class="error">Error searching products. Please try again later.</p>';
-            }
-        });
+    window.location.href = `product.php?${params.toString()}`;
 }
 
 function displayProducts(products) {
@@ -82,7 +81,7 @@ function createProductCard(product) {
     const safePrice = parseFloat(product.price).toFixed(2);
     
     card.innerHTML = `
-        <img src="products/" alt="${product.name}" class="product-image" onerror="this.src=''">
+        <img src="products/${imageUrl}" alt="${product.name}" class="product-image" onerror="this.src=''">
         <h3>${product.name}</h3>
         <p class="description">${product.description || 'No description available'}</p>
         <p class="baker">By ${product.baker_name || 'Unknown Baker'}</p>
@@ -94,7 +93,7 @@ function createProductCard(product) {
             <button class="quantity-btn plus" ${product.stock <= 0 ? 'disabled' : ''}>+</button>
         </div>
         <div class="action-buttons">
-            <button class="cart-btn" onclick="addToCart(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
+            <button class="cart-btn add-to-cart" data-product-id="${product.id}" ${product.stock <= 0 ? 'disabled' : ''}>
                 Add to Cart
             </button>
             <button class="buy-btn" onclick="buyNow(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
@@ -132,58 +131,6 @@ function createProductCard(product) {
 function updatePrice(priceElement, basePrice, quantity) {
     const totalPrice = (basePrice * quantity).toFixed(2);
     priceElement.textContent = `₹${totalPrice}`;
-}
-
-function addToCart(productId) {
-    const card = event.target.closest('.product-card');
-    if (!card) return;
-    
-    const quantity = parseInt(card.querySelector('.quantity').textContent);
-    const stockElement = card.querySelector('.stock');
-    const currentStock = parseInt(stockElement.textContent.match(/\d+/)[0]);
-
-    if (quantity > currentStock) {
-        alert('Not enough stock available');
-        return;
-    }
-
-    fetch('add_to_cart.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            product_id: productId,
-            quantity: quantity
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            updateCartCount(data.cartCount);
-            // Update the stock display
-            stockElement.textContent = `In Stock: ${currentStock - quantity}`;
-            alert('Product added to cart!');
-        } else {
-            throw new Error(data.message || 'Failed to add to cart');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to add product to cart. Please try again.');
-    });
-}
-
-function updateCartCount(count) {
-    const cartCountElement = document.getElementById('cart-count');
-    if (cartCountElement) {
-        cartCountElement.textContent = count;
-    }
 }
 
 function buyNow(productId) {

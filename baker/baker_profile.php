@@ -31,6 +31,8 @@ $registration_query->execute();
 $registration_result = $registration_query->get_result();
 $registration = $registration_result->fetch_assoc();
 
+// Check if this is a new baker
+$is_new_baker = isset($_GET['new']) && $_GET['new'] === '1';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Update registration details
@@ -114,16 +116,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta charset="UTF-8">
     <title>Baker Profile Setup - Homely Bakes</title>
     <link rel="stylesheet" href="baker_profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.getElementById('profile_image');
     const previewImage = document.getElementById('profile-preview');
+    const uploadIcon = document.getElementById('upload-icon');
 
     // Hide the image preview if no existing image
     if (previewImage.src === window.location.href || previewImage.src === '') {
         previewImage.style.display = 'none';
+        uploadIcon.style.display = 'block';
+    } else {
+        uploadIcon.style.display = 'none';
     }
 
     fileInput.addEventListener('change', function () {
@@ -133,6 +140,7 @@ document.addEventListener('DOMContentLoaded', function () {
             reader.onload = function (e) {
                 previewImage.src = e.target.result;
                 previewImage.style.display = 'block';
+                uploadIcon.style.display = 'none';
             };
             reader.readAsDataURL(file);
         }
@@ -140,15 +148,36 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<?php include "header.php"; ?>
-
 <div class="profile-card">
-    <h1>Complete Your Baker Profile</h1>
+    <h1><?php echo $is_new_baker ? "Welcome! Complete Your Baker Profile" : "Baker Profile"; ?></h1>
+    
+    <?php if ($is_new_baker): ?>
+    <div class="welcome-message">
+        <p>Welcome to Homely Bakes! To start selling your delicious treats, please complete your baker profile.</p>
+        <p>All fields marked with * are required.</p>
+    </div>
+    <?php endif; ?>
+
     <?php if (!empty($error)): ?>
         <p style="color: red;"><?php echo $error; ?></p>
     <?php endif; ?>
 
     <form method="POST" enctype="multipart/form-data">
+        <!-- Profile Image Section -->
+        <div class="profile-image-section">
+            <div class="profile-image-container">
+                <input type="file" id="profile_image" name="profile_image" accept="image/jpeg, image/png, image/gif, image/webp">
+                <label for="profile_image" class="profile-image-label">
+                    <img id="profile-preview" src="<?php echo !empty($baker['profile_image']) ? htmlspecialchars($baker['profile_image']) : ''; ?>" 
+                         alt="Profile Image Preview">
+                    <div id="upload-icon" class="upload-icon">
+                        <i class="fas fa-camera"></i>
+                        <span>Upload Photo</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
         <h2>Personal Details</h2>
         <div class="input-group">
             <label for="firstname">First Name</label>
@@ -210,29 +239,15 @@ document.addEventListener('DOMContentLoaded', function () {
             <label for="business_license">Business License Number</label>
             <input type="text" id="business_license" name="business_license" value="<?php echo htmlspecialchars($baker['business_license'] ?? ''); ?>">
         </div>
-        <div class="input-group">
-            <label for="profile_image">Profile Image</label>
-            <input type="file" id="profile_image" name="profile_image" accept="image/jpeg, image/png, image/gif, image/webp">
 
-            <!-- Image preview section -->
-            <div id="image-preview">
-                <?php if (!empty($baker['profile_image'])): ?>
-                    <img id="profile-preview" src="<?php echo htmlspecialchars($baker['profile_image']); ?>" alt="Current Profile Image" style="width: 100px; height: auto;">
-                <?php else: ?>
-                    <img id="profile-preview" src="#" alt="Profile Image Preview" style="display: none; width: 100px; height: auto;">
-                <?php endif; ?>
-            </div>
+        <div class="input-group">
+            <label for="availability_status">Availability Status</label>
+            <select id="availability_status" name="availability_status" required>
+                <option value="available" <?php echo (isset($baker['availability_status']) && $baker['availability_status'] == 'available') ? 'selected' : ''; ?>>Available</option>
+                <option value="busy" <?php echo (isset($baker['availability_status']) && $baker['availability_status'] == 'busy') ? 'selected' : ''; ?>>Busy</option>
+                <option value="closed" <?php echo (isset($baker['availability_status']) && $baker['availability_status'] == 'closed') ? 'selected' : ''; ?>>Closed</option>
+            </select>
         </div>
-
-
-        <div class="input-group">
-    <label for="availability_status">Availability Status</label>
-    <select id="availability_status" name="availability_status" required>
-        <option value="available" <?php echo (isset($baker['availability_status']) && $baker['availability_status'] == 'available') ? 'selected' : ''; ?>>Available</option>
-        <option value="busy" <?php echo (isset($baker['availability_status']) && $baker['availability_status'] == 'busy') ? 'selected' : ''; ?>>Busy</option>
-        <option value="closed" <?php echo (isset($baker['availability_status']) && $baker['availability_status'] == 'closed') ? 'selected' : ''; ?>>Closed</option>
-    </select>
-</div>
 
         <button type="submit">Save Profile</button>
     </form>

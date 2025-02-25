@@ -1,10 +1,81 @@
 <?php
-session_start(); 
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Clear any existing session on login page
+if (!isset($_POST['email'])) {
+    session_unset();
+    session_destroy();
+    session_start();
+}
+
 include 'connect.php';
 
+$error = "";
+
+// API endpoint to check email existence
+if (isset($_GET['check_email'])) {
+    $email = trim($_GET['check_email']);
+    
+    $sql = "SELECT email FROM table_login WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    echo json_encode(['exists' => $result->num_rows > 0]);
+    exit();
+}
+
+// API endpoint to check password
+if (isset($_POST['check_password']) && isset($_POST['email'])) {
+    $email = trim($_POST['email']);
+    $password = trim($_POST['check_password']);
+    
+    $sql = "SELECT password FROM table_login WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $isValid = password_verify($password, $row['password']);
+        echo json_encode(['valid' => $isValid]);
+    } else {
+        echo json_encode(['valid' => false]);
+    }
+    exit();
+}
+
+// Handle different error states
+if (isset($_SESSION['error'])) {
+    $error = $_SESSION['error'];
+    unset($_SESSION['error']);
+} elseif (isset($_GET['session_expired'])) {
+    $error = "Your session has expired. Please log in again.";
+} elseif (isset($_GET['invalid_session'])) {
+    $error = "Invalid session. Please log in again.";
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
+
+    // Input validation
+    if (empty($email) || empty($password)) {
+        $_SESSION['error'] = "Please enter both email and password.";
+        header("Location: /HomelyBakes/login.php");
+        exit();
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['error'] = "Please enter a valid email address.";
+        header("Location: /HomelyBakes/login.php");
+        exit();
+    }
 
     $sql = "SELECT 
                 t_reg.first_name,
@@ -25,47 +96,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->execute();
     $result = $stmt->get_result();
 
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-
-        if (password_verify($password, $row['password'])) {
-            // Store session variables
-            $_SESSION['user_id'] = $row['user_id'];
-            $_SESSION['firstname'] = $row['first_name'];
-            $_SESSION['username'] = $row['first_name']; 
-            $_SESSION['user_type'] = $row['user_type'];
-            $_SESSION['logged_in'] = true;
-
-            // Redirect based on user type
-
-
-           // if ($row['user_type'] === '0') {
-                $check_baker_sql = "SELECT * FROM table_baker WHERE user_id = ?";
-                $check_baker_stmt = $conn->prepare($check_baker_sql);
-                $check_baker_stmt->bind_param("i", $row['user_id']);
-                $check_baker_stmt->execute();
-                $baker_result = $check_baker_stmt->get_result();
-            
-                if ($baker_result->num_rows > 0) {
-                    header("Location: baker/baker_dashboard.php");
-                } else {
-                    header("Location: baker_profile.php"); // Redirect to profile completion if not done
-                }
-              //  exit();
-
-
-            } elseif ($row['user_type'] === '1') {
-                header("Location: product.php");
-                exit();
-            }
-        } else {
-            $error = "Invalid email or password!";
-        }
+    if ($result->num_rows == 0) {
+        $_SESSION['error'] = "Email does not exist in the database!";
+        header("Location: /HomelyBakes/login.php");
+        exit();
     } else {
-        $error = "Invalid email or password!";
+        $row = $result->fetch_assoc();
         
+        if (!password_verify($password, $row['password'])) {
+            $_SESSION['error'] = "Invalid email or password!";
+            header("Location: /HomelyBakes/login.php");
+            exit();
+        }
+        
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+        
+        // Successful login, store session data
+        $_SESSION['user_id'] = $row['user_id'];
+        $_SESSION['firstname'] = $row['first_name'];
+        $_SESSION['username'] = $row['first_name'];
+        $_SESSION['user_type'] = $row['user_type'];
+        $_SESSION['logged_in'] = true;
+        $_SESSION['login_time'] = time();
+        $_SESSION['last_activity'] = time();
+        
+        // Set cache control headers
+        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+        header("Pragma: no-cache");
+        
+        // Redirect based on user type
+        if ($row['user_type'] == 0) {
+            header("Location: /HomelyBakes/baker/baker_dashboard.php");
+        } else if ($row['user_type'] == 1) {
+            header("Location: /HomelyBakes/product.php");
+        } else {
+            $_SESSION['error'] = "Invalid user type!";
+            header("Location: /HomelyBakes/login.php");
+        }
+        exit();
     }
-
+}
 ?>
 
 <!DOCTYPE html>
@@ -75,10 +146,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Homely Bakes</title>
     <link rel="stylesheet" href="login.css">
-    <script src="login.js"></script>
 </head>
 <body>
-    <?php include "header.php" ?>
+    <?php include "header.php"; ?>
     <div class="login-card">
         <div class="chef-hat-div">
             <svg class="chef-hat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -91,7 +161,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" novalidate>
             <?php if (!empty($error)): ?>
-                <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
+                <div class="server-error"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
 
             <div class="input-group">
@@ -104,6 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
                     required
                 >
+                <div class="error-message" id="email-error"></div>
             </div>
             
             <div class="input-group">
@@ -117,54 +188,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         required
                     >
                 </div>
+                <div class="error-message" id="password-error"></div>
             </div>
             
             <button type="submit" id="signin">Sign In</button>
         </form>
-        <a href="reading_mail.php" style="text-align: center;">Forgot Password?</a>
+        <a href="reading_mail.php" class="forgot-password">Forgot Password?</a>
     </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Error message fade out
-        const errorMessage = document.querySelector('.error-message');
-        if (errorMessage) {
-            setTimeout(() => {
-                errorMessage.style.opacity = '0';
-                setTimeout(() => {
-                    errorMessage.style.display = 'none';
-                }, 300);
-            }, 3000);
-        }
-
-        // Form validation
-        const form = document.querySelector('form');
-        form.addEventListener('submit', function(e) {
-            const email = document.getElementById('email');
-            const password = document.getElementById('password');
-            let isValid = true;
-
-            // Reset previous error states
-            email.classList.remove('invalid');
-            password.classList.remove('invalid');
-
-            // Email validation
-            if (!email.value || !email.value.includes('@')) {
-                email.classList.add('invalid');
-                isValid = false;
-            }
-
-            // Password validation
-            if (!password.value || password.value.length < 8) {
-                password.classList.add('invalid');
-                isValid = false;
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-            }
-        });
-    });
-    </script>
+    <script src="login.js"></script>
 </body>
 </html>

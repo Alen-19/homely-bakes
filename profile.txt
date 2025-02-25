@@ -1,0 +1,336 @@
+<?php
+session_start();
+include 'connect.php';
+
+// Check if user is logged in
+if (!isset($_SESSION['logged_in']) || $_SESSION['user_type'] != 1) {
+    header("Location: login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$success_message = "";
+$error_message = "";
+
+// Handle form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $first_name = trim($_POST['first_name']);
+    $last_name = trim($_POST['last_name']);
+    $phone = trim($_POST['phone']);
+    $alt_phone = trim($_POST['alt_phone']);
+    $street_address = trim($_POST['street_address']);
+    $city = trim($_POST['city']);
+    $district = trim($_POST['district']);
+    $state = trim($_POST['state']);
+    $country = trim($_POST['country']);
+    $pincode = trim($_POST['pincode']);
+    
+    // Handle profile photo upload
+    $profile_photo = null;
+    if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] != 4) { // 4 means no file was uploaded
+        if ($_FILES['profile_photo']['error'] != 0) {
+            $error_message = "Error uploading file. Please try again.";
+        } else {
+            $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+            $filename = $_FILES['profile_photo']['name'];
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            
+            if (!in_array($ext, $allowed)) {
+                $error_message = "Invalid file type. Please upload a JPG, JPEG, PNG, or GIF file.";
+            } else {
+                $uploadDir = __DIR__ . '/uploads/profile_photos/';
+                $newname = "profile_" . $user_id . "_" . time() . "." . $ext;
+                
+                // Create directory if it doesn't exist
+                if (!file_exists($uploadDir)) {
+                    if (!mkdir($uploadDir, 0777, true)) {
+                        $error_message = "Failed to create upload directory. Please try again.";
+                    }
+                }
+                
+                if (!isset($error_message)) {
+                    // Ensure directory has proper permissions
+                    chmod($uploadDir, 0777);
+                    
+                    if (!move_uploaded_file($_FILES['profile_photo']['tmp_name'], $uploadDir . $newname)) {
+                        $error_message = "Failed to upload profile photo. Please try again.";
+                    } else {
+                        $profile_photo = $newname;
+                    }
+                }
+            }
+        }
+    }
+    
+    if (!isset($error_message)) {
+        // Start transaction
+        $conn->begin_transaction();
+        
+        try {
+            // Update registration table
+            $sql1 = "UPDATE table_registration SET 
+                    first_name = ?,
+                    last_name = ?,
+                    phone = ?,
+                    street_address = ?,
+                    city = ?,
+                    district = ?,
+                    state = ?,
+                    country = ?,
+                    pincode = ?
+                    WHERE user_id = ?";
+                    
+            $stmt1 = $conn->prepare($sql1);
+            $stmt1->bind_param("sssssssssi", $first_name, $last_name, $phone, $street_address, $city, $district, $state, $country, $pincode, $user_id);
+            $stmt1->execute();
+            
+            // Update customer record with profile photo and alternate phone
+            if ($profile_photo) {
+                $sql2 = "UPDATE table_customer SET alt_phone = ?, profile_photo = ? WHERE user_id = ?";
+                $stmt2 = $conn->prepare($sql2);
+                $stmt2->bind_param("ssi", $alt_phone, $profile_photo, $user_id);
+            } else {
+                $sql2 = "UPDATE table_customer SET alt_phone = ? WHERE user_id = ?";
+                $stmt2 = $conn->prepare($sql2);
+                $stmt2->bind_param("si", $alt_phone, $user_id);
+            }
+            $stmt2->execute();
+            
+            // Commit transaction
+            $conn->commit();
+            
+            $_SESSION['firstname'] = $first_name;
+            $_SESSION['username'] = $first_name;
+            $success_message = "Profile updated successfully!";
+            
+        } catch (Exception $e) {
+            // Rollback transaction on error
+            $conn->rollback();
+            $error_message = "Error updating profile. Please try again.";
+        }
+    }
+}
+
+// Fetch current user details
+$sql = "SELECT r.first_name, r.last_name, r.mobile_number, r.street_address, r.city, r.district, r.state, r.country, r.pincode,
+        c.alt_phone, c.profile_photo,
+        l.email
+        FROM table_registration r 
+        LEFT JOIN table_customer c ON r.user_id = c.user_id
+        LEFT JOIN table_login l ON r.user_id = l.user_id 
+        WHERE r.user_id = ?";
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+// If no customer record exists, create one
+if (!isset($user['alt_phone'])) {
+    $insert_sql = "INSERT INTO table_customer (user_id, alt_phone, profile_photo) VALUES (?, '', '')";
+    $insert_stmt = $conn->prepare($insert_sql);
+    $insert_stmt->bind_param("i", $user_id);
+    $insert_stmt->execute();
+    $user['alt_phone'] = '';
+    $user['profile_photo'] = '';
+}
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Homely Bakes</title>
+    <link rel="stylesheet" href="profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <?php include "header.php"; ?>
+    <div class="outer-profile-container">
+        <div class="profile-container">
+            <div class="profile-header">
+                <h1>My Profile</h1>
+                <p>View and update your personal information</p>
+            </div>
+            
+            <div class="profile-content">
+                <?php if (!empty($success_message)): ?>
+                    <div class="success-message" style="display: block;">
+                        <?php echo htmlspecialchars($success_message); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($error_message)): ?>
+                    <div class="error-message" style="display: block;">
+                        <?php echo htmlspecialchars($error_message); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" enctype="multipart/form-data">
+                    <div class="profile-photo-section">
+                        <div class="profile-photo-container" id="profile-photo-container">
+                            <?php
+                            $profile_photo_path = '';
+                            if (!empty($user['profile_photo'])) {
+                                $photo_path = __DIR__ . '/uploads/profile_photos/' . $user['profile_photo'];
+                                if (file_exists($photo_path)) {
+                                    $profile_photo_path = 'uploads/profile_photos/' . htmlspecialchars($user['profile_photo']);
+                                }
+                            }
+                            ?>
+                            <div class="profile-photo-wrapper">
+                                <img src="<?php echo !empty($profile_photo_path) ? $profile_photo_path : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDE1MCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiNGNUY1RjUiLz48cGF0aCBkPSJNNzUgODBDODguODA3MSA4MCAxMDAgNjguODA3MSAxMDAgNTVDMTAwIDQxLjE5MjkgODguODA3MSAzMCA3NSAzMEM2MS4xOTI5IDMwIDUwIDQxLjE5MjkgNTAgNTVDNTAgNjguODA3MSA2MS4xOTI5IDgwIDc1IDgwWiIgZmlsbD0iI0U1RTVFNSIvPjxwYXRoIGQ9Ik0xMTAgMTIwQzExMCAxMDcuODUgMTAwLjM3IDk3Ljg1IDg4LjMzIDk1LjM3QzgzLjk0IDk3LjM3IDc5LjIyIDk4LjUgNzQuNSA5OC41QzY5Ljc4IDk4LjUgNjUuMDYgOTcuMzcgNjAuNjcgOTUuMzdDNDguNjMgOTcuODUgMzkgMTA3Ljg1IDM5IDEyMEgxMTBaIiBmaWxsPSIjRTVFNUU1Ii8+PC9zdmc+'; ?>" 
+                                    alt="Profile Photo" id="profile-photo-preview">
+                            </div>
+                            <div class="profile-photo-overlay">
+                                <label for="profile-photo-input" class="profile-photo-upload">
+                                    <i class="fas fa-camera"></i>
+                                    <span><?php echo !empty($profile_photo_path) ? 'Change Photo' : 'Add Photo'; ?></span>
+                                </label>
+                            </div>
+                            <input type="file" id="profile-photo-input" name="profile_photo" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                    
+                    <div class="profile-section">
+                        <h2 class="section-title">Personal Information</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="first_name">First Name</label>
+                                <input type="text" id="first_name" name="first_name" 
+                                    value="<?php echo htmlspecialchars($user['first_name']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="last_name">Last Name</label>
+                                <input type="text" id="last_name" name="last_name" 
+                                    value="<?php echo htmlspecialchars($user['last_name']); ?>" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-section">
+                        <h2 class="section-title">Contact Information</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input type="email" id="email" name="email" 
+                                    value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Primary Phone Number</label>
+                                <input type="tel" id="phone" name="phone" 
+                                    value="<?php echo htmlspecialchars($user['mobile_number']); ?>" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="alt_phone">Alternate Phone Number (Optional)</label>
+                            <input type="tel" id="alt_phone" name="alt_phone" 
+                                value="<?php echo htmlspecialchars($user['alt_phone']); ?>">
+                        </div>
+                    </div>
+                    
+                    <div class="profile-section">
+                        <h2 class="section-title">Address Information</h2>
+                        <div class="form-group">
+                            <label for="street_address">House Name / Street Address</label>
+                            <input type="text" id="street_address" name="street_address" 
+                                value="<?php echo htmlspecialchars($user['street_address']); ?>" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="city">City</label>
+                                <input type="text" id="city" name="city" 
+                                    value="<?php echo htmlspecialchars($user['city']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="district">District</label>
+                                <input type="text" id="district" name="district" 
+                                    value="<?php echo htmlspecialchars($user['district']); ?>" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="state">State</label>
+                                <input type="text" id="state" name="state" 
+                                    value="<?php echo htmlspecialchars($user['state']); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="country">Country</label>
+                                <input type="text" id="country" name="country" 
+                                    value="<?php echo htmlspecialchars($user['country'] ?? 'India'); ?>" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="pincode">PIN Code</label>
+                            <input type="text" id="pincode" name="pincode" 
+                                value="<?php echo htmlspecialchars($user['pincode']); ?>" required>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-actions">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='product.php'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Preview profile photo before upload
+        document.getElementById('profile-photo-input').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                const preview = document.getElementById('profile-photo-preview');
+                const uploadLabel = document.querySelector('.profile-photo-upload span');
+                const container = document.getElementById('profile-photo-container');
+                
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size too large. Please select an image under 5MB.');
+                    return;
+                }
+                
+                reader.onload = function(e) {
+                    // Create a temporary image to verify dimensions
+                    const img = new Image();
+                    img.src = e.target.result;
+                    
+                    img.onload = function() {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                        container.classList.add('has-image');
+                        uploadLabel.textContent = 'Change Photo';
+                    };
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Auto-hide success/error messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('profile-photo-container');
+            const preview = document.getElementById('profile-photo-preview');
+            
+            // Add has-image class if there's an existing image
+            if (preview.src && !preview.src.includes('data:image/svg')) {
+                container.classList.add('has-image');
+            }
+            
+            setTimeout(function() {
+                const successMsg = document.querySelector('.success-message');
+                const errorMsg = document.querySelector('.error-message');
+                if (successMsg) successMsg.style.display = 'none';
+                if (errorMsg) errorMsg.style.display = 'none';
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

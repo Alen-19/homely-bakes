@@ -1,27 +1,31 @@
 <?php
-// Database connection
 require_once 'connect.php';
 
-// Function to fetch users with optional search
-function getUsers($conn, $search = '') {
+function getUsers($conn, $search = '', $page = 1, $per_page = 12) {
+    $offset = ($page - 1) * $per_page;
+    
     $query = "SELECT 
                 r.user_id,
                 r.first_name, 
                 r.last_name, 
                 r.mobile_number, 
                 r.city,
-                l.email
+                l.email,
+                l.user_type
               FROM table_registration r
               JOIN table_login l ON r.user_id = l.user_id
               WHERE 1=1";
     
-    // Add search conditions
     if (!empty($search)) {
         $search = mysqli_real_escape_string($conn, $search);
         $query .= " AND (r.first_name LIKE '%$search%' 
                          OR r.last_name LIKE '%$search%' 
-                         OR r.city LIKE '%$search%')";
+                         OR r.city LIKE '%$search%'
+                         OR l.email LIKE '%$search%')";
     }
+    
+    // Add pagination
+    $query .= " LIMIT $per_page OFFSET $offset";
     
     $result = mysqli_query($conn, $query);
     $users = [];
@@ -30,12 +34,32 @@ function getUsers($conn, $search = '') {
         $users[] = $row;
     }
     
-    return $users;
+    // Get total count for pagination
+    $count_query = "SELECT COUNT(*) as total FROM table_registration r
+                    JOIN table_login l ON r.user_id = l.user_id
+                    WHERE 1=1";
+    if (!empty($search)) {
+        $count_query .= " AND (r.first_name LIKE '%$search%' 
+                              OR r.last_name LIKE '%$search%' 
+                              OR r.city LIKE '%$search%'
+                              OR l.email LIKE '%$search%')";
+    }
+    
+    $count_result = mysqli_query($conn, $count_query);
+    $total_users = mysqli_fetch_assoc($count_result)['total'];
+    
+    return [
+        'users' => $users,
+        'total' => $total_users,
+        'pages' => ceil($total_users / $per_page)
+    ];
 }
 
-// Process search
 $search = $_GET['search'] ?? '';
-$users = getUsers($conn, $search);
+$current_page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$result = getUsers($conn, $search, $current_page);
+$users = $result['users'];
+$total_pages = $result['pages'];
 ?>
 
 <!DOCTYPE html>
@@ -43,92 +67,88 @@ $users = getUsers($conn, $search);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Directory</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-        .search-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
-        }
-        .search-input {
-            width: 300px;
-            padding: 10px;
-            border: 2px solid #ff6f61;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .search-button {
-            padding: 10px 20px;
-            background-color: #ff6f61;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-        .user-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .user-card {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease;
-            margin-top:40px;
-        }
-        .user-card:hover {
-            transform: scale(1.05);
-        }
-        .user-card h3 {
-            margin: 10px 0;
-            color: #333;
-        }
-        .user-card p {
-            color: #666;
-            margin: 5px 0;
-        }
-    </style>
+    <title>Contact Directory - Homely Bakes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="contact.css">
 </head>
 <body>
-<?php include "header.php"?>
+    <?php include "header.php"?>
+
+    <div class="page-header">
+        <h1>Contact Directory</h1>
+        <p>Connect with our community of bakers and food enthusiasts</p>
+    </div>
+
     <div class="search-container">
-        <form method="GET">
+        <form method="GET" class="search-form" style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;">
             <input type="text" 
                    name="search" 
                    class="search-input" 
-                   placeholder="Search by name or city"
+                   placeholder="Search by name, city, or email"
                    value="<?= htmlspecialchars($search) ?>">
-            <button type="submit" class="search-button">Search</button>
+            <button type="submit" class="search-button">
+                <i class="fas fa-search"></i> Search
+            </button>
         </form>
     </div>
 
     <div class="user-grid">
         <?php if (empty($users)): ?>
-            <p style="width: 100%; text-align: center;">No users found.</p>
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <h2>No users found</h2>
+                <p>Try adjusting your search criteria</p>
+            </div>
         <?php else: ?>
             <?php foreach ($users as $user): ?>
                 <div class="user-card">
-                    <h3><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></h3>
-                    <p><strong>Email:</strong> <?= htmlspecialchars($user['email']) ?></p>
-                    <p><strong>Phone:</strong> <?= htmlspecialchars($user['mobile_number']) ?></p>
-                    <p><strong>City:</strong> <?= htmlspecialchars($user['city']) ?></p>
+                    <h3>
+                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
+                        <?php if ($user['user_type'] === '0'): ?>
+                            <i class="fas fa-cookie" title="Baker"></i>
+                        <?php endif; ?>
+                    </h3>
+                    <div class="user-info">
+                        <p><i class="fas fa-envelope"></i> <?= htmlspecialchars($user['email']) ?></p>
+                        <p><i class="fas fa-phone"></i> <?= htmlspecialchars($user['mobile_number']) ?></p>
+                        <p><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($user['city']) ?></p>
+                    </div>
+                    <div class="contact-buttons">
+                        <a href="mailto:<?= htmlspecialchars($user['email']) ?>" class="contact-btn email-btn">
+                            <i class="fas fa-envelope"></i> Email
+                        </a>
+                        <a href="tel:<?= htmlspecialchars($user['mobile_number']) ?>" class="contact-btn call-btn">
+                            <i class="fas fa-phone"></i> Call
+                        </a>
+                    </div>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
+
+        <?php if ($total_pages > 1): ?>
+            <div class="pagination">
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <a href="?page=<?= $i ?><?= !empty($search) ? '&search=' . urlencode($search) : '' ?>" 
+                       class="page-link <?= $i === $current_page ? 'active' : '' ?>">
+                        <?= $i ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
     </div>
+
+    <script>
+        // Add loading state when searching
+        document.querySelector('.search-form').addEventListener('submit', function() {
+            document.querySelector('.user-grid').innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Searching...</p>
+                </div>
+            `;
+        });
+    </script>
 </body>
 </html>
-<?php
-// Close the database connection
-mysqli_close($conn);
-?>
+<?php mysqli_close($conn); ?>

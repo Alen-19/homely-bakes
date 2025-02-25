@@ -105,6 +105,68 @@ button[type="submit"]:hover {
     border: 1px solid #fad2d2;
 }
 
+/* Profile Image Styles */
+.profile-image-section {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0 30px;
+}
+
+.profile-image-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.profile-image-container input[type="file"] {
+    display: none;
+}
+
+.profile-image-label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: #f5f5f5;
+    border: 2px solid #ddd;
+    transition: all 0.3s ease;
+}
+
+.profile-image-label:hover {
+    border-color: #007bff;
+}
+
+#profile-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.upload-icon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #666;
+}
+
+.upload-icon i {
+    font-size: 1.8em;
+    margin-bottom: 6px;
+}
+
+.upload-icon span {
+    font-size: 0.8em;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .profile-card {

@@ -90,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($success) {
             mysqli_commit($conn);
             $_SESSION['success'] = "Registration successful! Please login.";
-            header("Location: login.php");
+            header("Location: /HomelyBakes/login.php");
             exit();
         } else {
             mysqli_rollback($conn);
