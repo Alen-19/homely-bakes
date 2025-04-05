@@ -112,6 +112,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Regenerate session ID for security
         session_regenerate_id(true);
         
+        // After validating credentials and before setting session variables
+        $check_baker_status = "SELECT b.admin_override 
+                              FROM table_baker b 
+                              JOIN table_login l ON b.user_id = l.user_id 
+                              WHERE l.user_id = ? AND l.user_type = 0";
+        $stmt = $conn->prepare($check_baker_status);
+        $stmt->bind_param("i", $row['user_id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $baker_status = $result->fetch_assoc();
+
+        // Check if baker is restricted
+        if ($row['user_type'] == 0 && $baker_status && $baker_status['admin_override'] == 'restricted') {
+            $_SESSION['error'] = "Your account has been restricted. Please contact support for assistance.";
+            header("Location: login.php");
+            exit();
+        }
+        
         // Successful login, store session data
         $_SESSION['user_id'] = $row['user_id'];
         $_SESSION['firstname'] = $row['first_name'];
@@ -130,6 +148,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header("Location: /HomelyBakes/baker/baker_dashboard.php");
         } else if ($row['user_type'] == 1) {
             header("Location: /HomelyBakes/product.php");
+        }
+        else if($row['user_type'] == 2) {
+            header("Location: /HomelyBakes/admin/admin_dashboard.php");
         } else {
             $_SESSION['error'] = "Invalid user type!";
             header("Location: /HomelyBakes/login.php");
@@ -146,6 +167,62 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Homely Bakes</title>
     <link rel="stylesheet" href="login.css">
+    <style>
+    .error-popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+        animation: slideIn 0.5s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadeOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+
+    .input-group {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: none;
+    }
+
+    .error-message.visible {
+        display: block;
+    }
+
+    input.error {
+        border-color: #dc3545;
+    }
+    </style>
 </head>
 <body>
     <?php include "header.php"; ?>
@@ -195,6 +272,166 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </form>
         <a href="reading_mail.php" class="forgot-password">Forgot Password?</a>
     </div>
-    <script src="login.js"></script>
+    <?php if(isset($_SESSION['error'])): ?>
+        <div id="error-message" class="error-popup">
+            <?php 
+                echo $_SESSION['error'];
+                unset($_SESSION['error']);
+            ?>
+        </div>
+    <?php endif; ?>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const emailError = document.getElementById('email-error');
+        const passwordError = document.getElementById('password-error');
+        const form = document.querySelector('form');
+        const errorMessage = document.getElementById('error-message');
+
+        // Regular expressions for validation
+        const emailRegex = /^(?=[^@]*[a-zA-Z]{3,})[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$/;
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+
+        function showError(element, errorElement, message) {
+            element.classList.add('error');
+            errorElement.textContent = message;
+            errorElement.classList.add('visible');
+        }
+
+        function hideError(element, errorElement) {
+            element.classList.remove('error');
+            errorElement.textContent = '';
+            errorElement.classList.remove('visible');
+        }
+
+        async function validateEmail() {
+            const email = emailInput.value.trim();
+
+            if (!email) {
+                showError(emailInput, emailError, 'Email is required');
+                return false;
+            }
+
+            if (!emailRegex.test(email)) {
+                showError(emailInput, emailError, 'Please enter a valid email address');
+                return false;
+            }
+
+            try {
+                const response = await fetch(`?check_email=${encodeURIComponent(email)}`);
+                const data = await response.json();
+                
+                if (!data.exists) {
+                    showError(emailInput, emailError, 'Email not registered');
+                    return false;
+                }
+                
+                hideError(emailInput, emailError);
+                return true;
+            } catch (error) {
+                console.error('Error checking email:', error);
+                showError(emailInput, emailError, 'Error checking email');
+                return false;
+            }
+        }
+
+        async function validatePassword() {
+            const password = passwordInput.value.trim();
+            const email = emailInput.value.trim();
+
+            if (!password) {
+                showError(passwordInput, passwordError, 'Password is required');
+                return false;
+            }
+
+            if (!passwordRegex.test(password)) {
+                showError(passwordInput, passwordError, 'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character');
+                return false;
+            }
+
+            if (await validateEmail()) {
+                try {
+                    const formData = new FormData();
+                    formData.append('check_password', password);
+                    formData.append('email', email);
+
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!data.valid) {
+                        showError(passwordInput, passwordError, 'Wrong password');
+                        return false;
+                    }
+                    
+                    hideError(passwordInput, passwordError);
+                    return true;
+                } catch (error) {
+                    console.error('Error validating password:', error);
+                    return false;
+                }
+            }
+            
+            return false;
+        }
+
+        // Real-time validation
+        let emailTimeout;
+        emailInput.addEventListener('input', () => {
+            clearTimeout(emailTimeout);
+            if (emailInput.value.trim()) {
+                emailTimeout = setTimeout(() => {
+                    validateEmail();
+                }, 500);
+            } else {
+                hideError(emailInput, emailError);
+            }
+        });
+
+        let passwordTimeout;
+        passwordInput.addEventListener('input', () => {
+            clearTimeout(passwordTimeout);
+            if (passwordInput.value.trim()) {
+                passwordTimeout = setTimeout(() => {
+                    validatePassword();
+                }, 500);
+            } else {
+                hideError(passwordInput, passwordError);
+            }
+        });
+
+        // Validate on blur
+        emailInput.addEventListener('blur', validateEmail);
+        passwordInput.addEventListener('blur', validatePassword);
+
+        // Form submission
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const isEmailValid = await validateEmail();
+            const isPasswordValid = await validatePassword();
+
+            if (isEmailValid && isPasswordValid) {
+                this.submit();
+            }
+        });
+
+        // Handle error message fadeout
+        if (errorMessage) {
+            setTimeout(() => {
+                errorMessage.style.animation = 'fadeOut 0.5s ease-out forwards';
+            }, 2500);
+
+            setTimeout(() => {
+                errorMessage.remove();
+            }, 3000);
+        }
+    });
+    </script>
 </body>
 </html>

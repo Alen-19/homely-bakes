@@ -1,0 +1,12 @@
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
+}
+
+/* Initially show products section */
+#products-section {
+  display: block;
+}

@@ -56,14 +56,13 @@ try {
     }
     
     // Insert product into database
-    $insert_query = "INSERT INTO table_product (baker_id, product_name, category_id, price, stock, description, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $insert_query = "INSERT INTO table_product (baker_id, product_name, category_id, price, description, image_url) VALUES (?, ?, ?, ?, ?, ?)";
     $insert_stmt = $conn->prepare($insert_query);
-    $insert_stmt->bind_param("isiidss", 
+    $insert_stmt->bind_param("isidss", 
         $baker_id,
         $_POST['name'],
         $_POST['category'],
         $_POST['price'],
-        $_POST['stock'],
         $_POST['description'],
         $image_url
     );

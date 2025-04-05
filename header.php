@@ -1,4 +1,7 @@
 <?php
+// Start output buffering
+ob_start();
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -35,8 +38,6 @@ if (isset($_SESSION['logged_in'])) {
     // Update last activity time
     $_SESSION['last_activity'] = time();
 }
-
-// Add no-cache meta tags for all pages
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -101,6 +102,11 @@ if (isset($_SESSION['logged_in'])) {
                                                 <i class="fas fa-user"></i> Profile
                                             </a>
                                         </li>
+                                        <li>
+                                            <a href="<?= $base_url ?>baker_analytics.php">
+                                                <i class="fas fa-chart-line"></i> Analytics
+                                            </a>
+                                        </li>
                                     <?php else: ?>
                                         <li>
                                             <a href="<?= $base_url ?>profile.php">
@@ -115,6 +121,11 @@ if (isset($_SESSION['logged_in'])) {
                                         <li>
                                             <a href="<?= $base_url ?>wishlist.php">
                                                 <i class="fas fa-heart"></i> Wishlist
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="<?= $base_url ?>cart.php">
+                                                <i class="fas fa-shopping-cart"></i> Cart
                                             </a>
                                         </li>
                                     <?php endif; ?>

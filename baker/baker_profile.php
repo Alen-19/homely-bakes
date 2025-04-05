@@ -35,75 +35,145 @@ $registration = $registration_result->fetch_assoc();
 $is_new_baker = isset($_GET['new']) && $_GET['new'] === '1';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Update registration details
-    $firstname = $_POST['firstname'];
-    $lastname = $_POST['lastname'];
-    $mobile_number = $_POST['mobile_number'];
-    $street_address = $_POST['street_address'];
-    $city = $_POST['city'];
-    $district = $_POST['district'];
-    $state = $_POST['state'];
-    $country = $_POST['country'];
-    $pincode = $_POST['pincode'];
-
-    $update_registration_sql = "UPDATE table_registration SET first_name=?, last_name=?, mobile_number=?, street_address=?, city=?, district=?, state=?, country=?, pincode=? WHERE user_id=?";
-    $update_registration_stmt = $conn->prepare($update_registration_sql);
-    $update_registration_stmt->bind_param("sssssssssi", $firstname, $lastname, $mobile_number, $street_address, $city, $district, $state, $country, $pincode, $registration['user_id']);
-    $update_registration_stmt->execute();
-
-    // Update or insert baker profile
-    $bakery_name = $_POST['bakery_name'];
-    $description = $_POST['description'];
-    $business_license = $_POST['business_license'];
-    $availability_status = $_POST['availability_status'];
-
-    // Handle file upload and remove old image
-    $profile_image = $baker['profile_image'] ?? '';  // Default to existing image
+    $errors = [];
+    
+    // Validate Personal Details
+    if (empty($_POST['firstname']) || strlen($_POST['firstname']) > 50) {
+        $errors[] = "First name is required and should not exceed 50 characters";
+    }
+    
+    if (empty($_POST['lastname']) || strlen($_POST['lastname']) > 50) {
+        $errors[] = "Last name is required and should not exceed 50 characters";
+    }
+    
+    if (empty($_POST['mobile_number']) || !preg_match('/^[0-9]{10}$/', $_POST['mobile_number'])) {
+        $errors[] = "Please enter a valid 10-digit mobile number";
+    }
+    
+    if (empty($_POST['street_address']) || strlen($_POST['street_address']) > 100) {
+        $errors[] = "Street address is required and should not exceed 100 characters";
+    }
+    
+    if (empty($_POST['city']) || strlen($_POST['city']) > 50) {
+        $errors[] = "City is required and should not exceed 50 characters";
+    }
+    
+    if (empty($_POST['district']) || strlen($_POST['district']) > 50) {
+        $errors[] = "District is required and should not exceed 50 characters";
+    }
+    
+    if (empty($_POST['state']) || strlen($_POST['state']) > 50) {
+        $errors[] = "State is required and should not exceed 50 characters";
+    }
+    
+    if (empty($_POST['country']) || strlen($_POST['country']) > 50) {
+        $errors[] = "Country is required and should not exceed 50 characters";
+    }
+    
+    if (empty($_POST['pincode']) || !preg_match('/^[0-9]{6}$/', $_POST['pincode'])) {
+        $errors[] = "Please enter a valid 6-digit pincode";
+    }
+    
+    // Validate Bakery Details
+    if (empty($_POST['bakery_name']) || strlen($_POST['bakery_name']) > 100) {
+        $errors[] = "Bakery name is required and should not exceed 100 characters";
+    }
+    
+    if (empty($_POST['description']) || strlen($_POST['description']) > 500) {
+        $errors[] = "Description is required and should not exceed 500 characters";
+    }
+    
+    if (!empty($_POST['business_license']) && !preg_match('/^[A-Z0-9]{10,15}$/', $_POST['business_license'])) {
+        $errors[] = "Business license should be 10-15 characters long and contain only uppercase letters and numbers";
+    }
+    
+    // Validate Image Upload
     if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
         $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $max_size = 5 * 1024 * 1024; // 5MB
         $file_type = mime_content_type($_FILES['profile_image']['tmp_name']);
-
-        if (in_array($file_type, $allowed_types)) {
-            $target_dir = "uploads/";
-            if (!file_exists($target_dir)) {
-                mkdir($target_dir, 0755, true);
-            }
-
-            // Remove old image if exists
-            if (!empty($profile_image) && file_exists($profile_image)) {
-                unlink($profile_image);
-            }
-
-            $file_name = uniqid() . '_' . basename($_FILES["profile_image"]["name"]);
-            $profile_image = $target_dir . $file_name;
-
-            if (!move_uploaded_file($_FILES["profile_image"]["tmp_name"], $profile_image)) {
-                $error = "Failed to upload the image. Please try again.";
-            }
-        } else {
-            $error = "Invalid file type. Only JPG, PNG, GIF, and WEBP formats are allowed.";
+        
+        if (!in_array($file_type, $allowed_types)) {
+            $errors[] = "Invalid file type. Only JPG, PNG, GIF, and WEBP formats are allowed";
+        }
+        
+        if ($_FILES['profile_image']['size'] > $max_size) {
+            $errors[] = "File size should not exceed 5MB";
         }
     }
 
-    // Insert or Update logic
-    if (empty($error)) {
-        if ($baker) {
-            // Update existing baker profile
-            $update_baker_sql = "UPDATE table_baker SET bakery_name=?, description=?, business_license=?, profile_image=?, availability_status=? WHERE user_id=?";
-            $update_baker_stmt = $conn->prepare($update_baker_sql);
-            $update_baker_stmt->bind_param("sssssi", $bakery_name, $description, $business_license, $profile_image, $availability_status, $user_id);
-        } else {
-            // Insert new baker profile
-            $insert_baker_sql = "INSERT INTO table_baker (user_id, bakery_name, description, business_license, profile_image, availability_status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())";
-            $update_baker_stmt = $conn->prepare($insert_baker_sql);
-            $update_baker_stmt->bind_param("isssss", $user_id, $bakery_name, $description, $business_license, $profile_image, $availability_status);
+    // If no errors, proceed with update
+    if (empty($errors)) {
+        // Update registration details
+        $firstname = $_POST['firstname'];
+        $lastname = $_POST['lastname'];
+        $mobile_number = $_POST['mobile_number'];
+        $street_address = $_POST['street_address'];
+        $city = $_POST['city'];
+        $district = $_POST['district'];
+        $state = $_POST['state'];
+        $country = $_POST['country'];
+        $pincode = $_POST['pincode'];
+
+        $update_registration_sql = "UPDATE table_registration SET first_name=?, last_name=?, mobile_number=?, street_address=?, city=?, district=?, state=?, country=?, pincode=? WHERE user_id=?";
+        $update_registration_stmt = $conn->prepare($update_registration_sql);
+        $update_registration_stmt->bind_param("sssssssssi", $firstname, $lastname, $mobile_number, $street_address, $city, $district, $state, $country, $pincode, $registration['user_id']);
+        $update_registration_stmt->execute();
+
+        // Update or insert baker profile
+        $bakery_name = $_POST['bakery_name'];
+        $description = $_POST['description'];
+        $business_license = $_POST['business_license'];
+        $availability_status = $_POST['availability_status'];
+
+        // Handle file upload and remove old image
+        $profile_image = $baker['profile_image'] ?? '';  // Default to existing image
+        if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
+            $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            $file_type = mime_content_type($_FILES['profile_image']['tmp_name']);
+
+            if (in_array($file_type, $allowed_types)) {
+                $target_dir = "uploads/";
+                if (!file_exists($target_dir)) {
+                    mkdir($target_dir, 0755, true);
+                }
+
+                // Remove old image if exists
+                if (!empty($profile_image) && file_exists($profile_image)) {
+                    unlink($profile_image);
+                }
+
+                $file_name = uniqid() . '_' . basename($_FILES["profile_image"]["name"]);
+                $profile_image = $target_dir . $file_name;
+
+                if (!move_uploaded_file($_FILES["profile_image"]["tmp_name"], $profile_image)) {
+                    $error = "Failed to upload the image. Please try again.";
+                }
+            } else {
+                $error = "Invalid file type. Only JPG, PNG, GIF, and WEBP formats are allowed.";
+            }
         }
 
-        if ($update_baker_stmt->execute()) {
-            header("Location: baker_dashboard.php");
-            exit();
-        } else {
-            $error = "Error saving baker information. Please try again.";
+        // Insert or Update logic
+        if (empty($error)) {
+            if ($baker) {
+                // Update existing baker profile
+                $update_baker_sql = "UPDATE table_baker SET bakery_name=?, description=?, business_license=?, profile_image=?, availability_status=? WHERE user_id=?";
+                $update_baker_stmt = $conn->prepare($update_baker_sql);
+                $update_baker_stmt->bind_param("sssssi", $bakery_name, $description, $business_license, $profile_image, $availability_status, $user_id);
+            } else {
+                // Insert new baker profile
+                $insert_baker_sql = "INSERT INTO table_baker (user_id, bakery_name, description, business_license, profile_image, availability_status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())";
+                $update_baker_stmt = $conn->prepare($insert_baker_sql);
+                $update_baker_stmt->bind_param("isssss", $user_id, $bakery_name, $description, $business_license, $profile_image, $availability_status);
+            }
+
+            if ($update_baker_stmt->execute()) {
+                header("Location: baker_dashboard.php");
+                exit();
+            } else {
+                $error = "Error saving baker information. Please try again.";
+            }
         }
     }
 }
@@ -117,6 +187,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Baker Profile Setup - Homely Bakes</title>
     <link rel="stylesheet" href="baker_profile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+    .error-message {
+        color: #dc3545;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+        list-style-position: inside;
+    }
+
+    .input-error {
+        border-color: #dc3545 !important;
+    }
+
+    .error-text {
+        color: #dc3545;
+        font-size: 0.875em;
+        margin-top: 5px;
+    }
+    </style>
 </head>
 <body>
 <script>
@@ -158,11 +249,15 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
     <?php endif; ?>
 
-    <?php if (!empty($error)): ?>
-        <p style="color: red;"><?php echo $error; ?></p>
+    <?php if (!empty($errors)): ?>
+        <ul class="error-message">
+            <?php foreach ($errors as $error): ?>
+                <li><?php echo htmlspecialchars($error); ?></li>
+            <?php endforeach; ?>
+        </ul>
     <?php endif; ?>
 
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" id="baker-profile-form" novalidate>
         <!-- Profile Image Section -->
         <div class="profile-image-section">
             <div class="profile-image-container">
@@ -252,6 +347,125 @@ document.addEventListener('DOMContentLoaded', function () {
         <button type="submit">Save Profile</button>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('baker-profile-form');
+    
+    // Real-time validation
+    const validateInput = (input) => {
+        const value = input.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+        
+        switch(input.id) {
+            case 'firstname':
+            case 'lastname':
+                if (value.length === 0 || value.length > 50) {
+                    isValid = false;
+                    errorMessage = 'Should be between 1 and 50 characters';
+                }
+                break;
+                
+            case 'mobile_number':
+                if (!/^[0-9]{10}$/.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid 10-digit mobile number';
+                }
+                break;
+                
+            case 'pincode':
+                if (!/^[0-9]{6}$/.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Please enter a valid 6-digit pincode';
+                }
+                break;
+                
+            case 'bakery_name':
+                if (value.length === 0 || value.length > 100) {
+                    isValid = false;
+                    errorMessage = 'Should be between 1 and 100 characters';
+                }
+                break;
+                
+            case 'description':
+                if (value.length === 0 || value.length > 500) {
+                    isValid = false;
+                    errorMessage = 'Should be between 1 and 500 characters';
+                }
+                break;
+                
+            case 'business_license':
+                if (value && !/^[A-Z0-9]{10,15}$/.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Should be 10-15 characters (uppercase letters and numbers only)';
+                }
+                break;
+        }
+        
+        // Update UI
+        const errorDiv = input.nextElementSibling;
+        if (!isValid) {
+            input.classList.add('input-error');
+            if (!errorDiv || !errorDiv.classList.contains('error-text')) {
+                const div = document.createElement('div');
+                div.className = 'error-text';
+                div.textContent = errorMessage;
+                input.parentNode.insertBefore(div, input.nextSibling);
+            } else {
+                errorDiv.textContent = errorMessage;
+            }
+        } else {
+            input.classList.remove('input-error');
+            if (errorDiv && errorDiv.classList.contains('error-text')) {
+                errorDiv.remove();
+            }
+        }
+        
+        return isValid;
+    };
+    
+    // Add validation to all inputs
+    const inputs = form.querySelectorAll('input, textarea');
+    inputs.forEach(input => {
+        input.addEventListener('blur', () => validateInput(input));
+        input.addEventListener('input', () => validateInput(input));
+    });
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        inputs.forEach(input => {
+            if (!validateInput(input)) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fix the errors in the form before submitting.');
+        }
+    });
+    
+    // File input validation
+    const fileInput = document.getElementById('profile_image');
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            
+            if (file.size > maxSize) {
+                alert('File size should not exceed 5MB');
+                fileInput.value = '';
+            } else if (!allowedTypes.includes(file.type)) {
+                alert('Only JPG, PNG, GIF, and WEBP formats are allowed');
+                fileInput.value = '';
+            }
+        }
+    });
+});
+</script>
 
 </body>
 </html>

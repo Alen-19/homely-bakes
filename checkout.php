@@ -2,30 +2,49 @@
 session_start();
 require_once 'connect.php';
 
-// Get product ID and quantity from URL parameters
-$product_id = isset($_GET['product_id']) ? (int)$_GET['product_id'] : 0;
-$quantity = isset($_GET['quantity']) ? (int)$_GET['quantity'] : 1;
+// Get product IDs and quantities from URL parameters
+$product_ids = isset($_GET['product_id']) ? $_GET['product_id'] : [];
+$quantities = isset($_GET['quantity']) ? $_GET['quantity'] : [];
 
-// Fetch product and baker information
-$stmt = $conn->prepare("
-    SELECT p.*, b.name as baker_name, b.location as baker_location 
-    FROM products p 
-    JOIN bakers b ON p.baker_id = b.id 
-    WHERE p.id = ?
-");
-$stmt->bind_param("i", $product_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$product = $result->fetch_assoc();
+$total = 0;
+$subtotal = 0;
+$products = [];
 
-// Check if product exists and has enough stock
-if (!$product || $product['stock'] < $quantity) {
-    header("Location: products.php?error=invalid_product");
+// Fetch all products information
+if (!empty($product_ids)) {
+    foreach($product_ids as $key => $product_id) {
+        $stmt = $conn->prepare("
+            SELECT p.*, 
+                   r.first_name as baker_name, 
+                   r.city as baker_location,
+                   b.bakery_name,
+                   p.product_name as name,
+                   p.image_url
+            FROM table_product p 
+            JOIN table_baker b ON p.baker_id = b.baker_id
+            JOIN table_registration r ON b.user_id = r.user_id 
+            WHERE p.product_id = ?
+        ");
+        $stmt->bind_param("i", $product_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $product = $result->fetch_assoc();
+        
+        if ($product) {
+            $product['quantity'] = $quantities[$key];
+            $product['item_total'] = $product['price'] * $quantities[$key];
+            $subtotal += $product['item_total'];
+            $products[] = $product;
+        }
+    }
+}
+
+if (empty($products)) {
+    header("Location: cart.php?error=no_items");
     exit;
 }
 
 // Calculate totals
-$subtotal = $product['price'] * $quantity;
 $tax_rate = 0.08; // 8% tax
 $tax = $subtotal * $tax_rate;
 $shipping = 5.99; // Fixed shipping rate
@@ -47,41 +66,44 @@ $total = $subtotal + $tax + $shipping;
         <!-- Order Summary -->
         <div class="order-summary">
             <h2>Order Summary</h2>
+            <?php foreach($products as $product): ?>
             <div class="product-summary">
                 <img src="<?php echo htmlspecialchars($product['image_url']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-thumbnail">
                 <div class="product-details">
                     <h3><?php echo htmlspecialchars($product['name']); ?></h3>
                     <p>Baker: <?php echo htmlspecialchars($product['baker_name']); ?></p>
                     <p>Location: <?php echo htmlspecialchars($product['baker_location']); ?></p>
-                    <p>Quantity: <?php echo $quantity; ?></p>
-                    <p>Price per item: $<?php echo number_format($product['price'], 2); ?></p>
+                    <p>Quantity: <?php echo $product['quantity']; ?></p>
+                    <p>Price per item: ₹<?php echo number_format($product['price'], 2); ?></p>
+                    <p>Item Total: ₹<?php echo number_format($product['item_total'], 2); ?></p>
                 </div>
             </div>
+            <?php endforeach; ?>
             
             <div class="price-breakdown">
                 <div class="price-row">
                     <span>Subtotal:</span>
-                    <span>$<?php echo number_format($subtotal, 2); ?></span>
+                    <span>₹<?php echo number_format($subtotal, 2); ?></span>
                 </div>
                 <div class="price-row">
                     <span>Tax (8%):</span>
-                    <span>$<?php echo number_format($tax, 2); ?></span>
+                    <span>₹<?php echo number_format($tax, 2); ?></span>
                 </div>
                 <div class="price-row">
                     <span>Shipping:</span>
-                    <span>$<?php echo number_format($shipping, 2); ?></span>
+                    <span>₹<?php echo number_format($shipping, 2); ?></span>
                 </div>
                 <div class="price-row total">
                     <span>Total:</span>
-                    <span>$<?php echo number_format($total, 2); ?></span>
+                    <span>₹<?php echo number_format($total, 2); ?></span>
                 </div>
             </div>
         </div>
 
         <!-- Checkout Form -->
         <form id="checkout-form" action="process_order.php" method="POST">
-            <input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
-            <input type="hidden" name="quantity" value="<?php echo $quantity; ?>">
+            <input type="hidden" name="product_id" value="<?php echo implode(",", $product_ids); ?>">
+            <input type="hidden" name="quantity" value="<?php echo implode(",", $quantities); ?>">
             <input type="hidden" name="total" value="<?php echo $total; ?>">
             
             <div class="form-section">

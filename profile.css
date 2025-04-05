@@ -55,70 +55,64 @@
 
 .profile-photo-section {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 2rem;
 }
 
 .profile-photo-container {
     position: relative;
-    display: inline-block;
     width: 150px;
     height: 150px;
     margin: 0 auto;
     border-radius: 50%;
-    background-color: #f5f5f5;
     overflow: hidden;
-    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.profile-photo-wrapper {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-.profile-photo-container img {
+.profile-photo {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
 }
 
-.profile-photo-container.has-image:hover img {
-    transform: scale(1.1);
-}
-
-.profile-photo-overlay {
+.profile-photo-upload {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     background: rgba(0, 0, 0, 0.6);
-    padding: 10px 0;
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s;
 }
 
-.profile-photo-container:hover .profile-photo-overlay {
+.profile-photo-container:hover .profile-photo-upload {
     opacity: 1;
 }
 
-.profile-photo-upload {
+.profile-photo-input {
+    display: none;
+}
+
+.profile-photo-upload label {
     color: white;
     cursor: pointer;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    font-size: 14px;
 }
 
 .profile-photo-upload i {
-    font-size: 20px;
+    font-size: 16px;
 }
 
-.profile-photo-upload span {
-    font-size: 14px;
-    font-weight: 500;
+.profile-photo-help {
+    margin-top: 8px;
+    color: #666;
+    font-size: 12px;
 }
 
 .form-row {

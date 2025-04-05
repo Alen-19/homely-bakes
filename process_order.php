@@ -1,65 +1,73 @@
 <?php
 session_start();
-include 'connect.php';
+include('connect.php');
 
-if (!isset($_SESSION['user_id']) || !isset($_POST['product_id'])) {
-    header("Location: product.php");
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
     exit();
 }
 
-$user_id = $_SESSION['user_id'];
-$product_id = mysqli_real_escape_string($conn, $_POST['product_id']);
-$size = mysqli_real_escape_string($conn, $_POST['size']);
-$delivery_address = mysqli_real_escape_string($conn, $_POST['delivery_address']);
-$city = mysqli_real_escape_string($conn, $_POST['city']);
-$state = mysqli_real_escape_string($conn, $_POST['state']);
-$country = mysqli_real_escape_string($conn, $_POST['country']);
+// Check if form was submitted
+if ($_SERVER["REQUEST_METHOD"] != "POST") {
+    header("Location: index.php");
+    exit();
+}
 
-// Get product details
-$product_query = "SELECT * FROM table_product WHERE product_id = '$product_id'";
-$product_result = mysqli_query($conn, $product_query);
-$product = mysqli_fetch_assoc($product_result);
+// Get user ID from session
+$user_id = $_SESSION['user_id'];
+
+if (!isset($_POST['delivery_address']) || empty(trim($_POST['delivery_address']))) {
+    $_SESSION['error'] = "Delivery address is required!";
+    header("Location: place_order.php?product_id=" . $product_id);
+    exit();
+}
+
+// Get order details from form
+$product_id = $_POST['product_id'];
+$quantity = floatval($_POST['quantity']);
+$total_price = floatval($_POST['total_price']);
+$delivery_address = $_POST['delivery_address'];
+$special_instructions = $_POST['special_instructions'] ?? '';
+$delivery_charge = floatval($_POST['delivery_charge'] ?? 0);
+$distance = floatval($_POST['distance'] ?? 0);
+
+// Get product details to determine baker_id
+$query = "SELECT baker_id FROM table_product WHERE product_id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $product_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$product = $result->fetch_assoc();
 
 if (!$product) {
-    $_SESSION['error'] = "Product not found";
+    $_SESSION['error'] = "Product not found!";
     header("Location: product.php");
     exit();
 }
 
-// Calculate total price
-$total_price = $product['price'] * $size;
+$baker_id = $product['baker_id'];
 
-// Create order
-$order_query = "INSERT INTO table_orders (
-    user_id, 
-    product_id, 
-    size_kg,
-    total_price,
-    delivery_address,
-    city,
-    state,
-    country,
-    status,
-    created_at
-) VALUES (
-    '$user_id',
-    '$product_id',
-    '$size',
-    '$total_price',
-    '$delivery_address',
-    '$city',
-    '$state',
-    '$country',
-    'pending',
-    NOW()
-)";
+$query = "INSERT INTO table_orders (user_id, baker_id, product_id, quantity, total_price, delivery_address, special_instructions, delivery_charge, distance) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+          
+// Check if delivery address is valid before inserting
+if (empty($delivery_address)) {
+    $_SESSION['error'] = "Delivery address is required!";
+    header("Location: place_order.php?product_id=" . $product_id);
+    exit();
+}
+$stmt = $conn->prepare($query);
+$stmt->bind_param("iiiddssdd", $user_id, $baker_id, $product_id, $quantity, $total_price, $delivery_address, $special_instructions, $delivery_charge, $distance);
 
-if (mysqli_query($conn, $order_query)) {
-    $_SESSION['success'] = "Order placed successfully! You can track your order in your dashboard.";
-    header("Location: orders.php");
+if ($stmt->execute()) {
+    $order_id = $stmt->insert_id;
+    $_SESSION['success'] = "Order placed successfully! Your order ID is #" . $order_id;
+    header("Location: order_confirmation.php?order_id=" . $order_id);
+    exit();
 } else {
     $_SESSION['error'] = "Failed to place order. Please try again.";
     header("Location: place_order.php?product_id=" . $product_id);
+    exit();
 }
-
-mysqli_close($conn);
+?>

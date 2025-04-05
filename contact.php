@@ -14,7 +14,7 @@ function getUsers($conn, $search = '', $page = 1, $per_page = 12) {
                 l.user_type
               FROM table_registration r
               JOIN table_login l ON r.user_id = l.user_id
-              WHERE 1=1";
+              WHERE l.user_type = '0'";
     
     if (!empty($search)) {
         $search = mysqli_real_escape_string($conn, $search);
@@ -37,7 +37,7 @@ function getUsers($conn, $search = '', $page = 1, $per_page = 12) {
     // Get total count for pagination
     $count_query = "SELECT COUNT(*) as total FROM table_registration r
                     JOIN table_login l ON r.user_id = l.user_id
-                    WHERE 1=1";
+                    WHERE l.user_type = '0'";
     if (!empty($search)) {
         $count_query .= " AND (r.first_name LIKE '%$search%' 
                               OR r.last_name LIKE '%$search%' 
@@ -103,12 +103,7 @@ $total_pages = $result['pages'];
         <?php else: ?>
             <?php foreach ($users as $user): ?>
                 <div class="user-card">
-                    <h3>
-                        <?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>
-                        <?php if ($user['user_type'] === '0'): ?>
-                            <i class="fas fa-cookie" title="Baker"></i>
-                        <?php endif; ?>
-                    </h3>
+                    <h3><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></h3>
                     <div class="user-info">
                         <p><i class="fas fa-envelope"></i> <?= htmlspecialchars($user['email']) ?></p>
                         <p><i class="fas fa-phone"></i> <?= htmlspecialchars($user['mobile_number']) ?></p>
