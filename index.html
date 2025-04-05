@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Homely Bakes</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="header.css" />
+    
+    <!-- JS -->
+    <script src="header.js" defer></script>
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+
+    <!-- Header (static version, no PHP logic) -->
+    <header class="header">
+        <div class="container1">
+            <div class="logo">
+                <img src="img/logo.png" alt="Homely Bakes" />
+            </div>
+            <nav class="nav">
+                <a href="index.html" class="active">Home</a>
+                <a href="product.php">Products</a>
+                <a href="orders.php">Order</a>
+                <a href="contact.php">Contact</a>
+
+                <div class="auth-section">
+                    <!-- Show login/signup for static page -->
+                    <div class="login-container">
+                        <button class="login-button" id="login-button" onclick="redirectToLogin()">Login</button>
+                    </div>
+                    <div class="signup-container">
+                        <button class="signup-button" id="sign-button">SignUp</button>
+                        <div class="dropdown-content">
+                            <button class="dropdown-btn" data-type="0">Baker</button>
+                            <button class="dropdown-btn" data-type="1">Customer</button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <video class="background-video" autoplay muted loop playsinline>
+            <source src="vdo/rotatingcake.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+        </video>
+
+        <div class="hero-content">
+            <h2>Discover the Joy of Homemade <br /> Baking</h2>
+            <p>Find the best homemade bakers near you.</p>
+            <a href="product.php"><button id="explor-now">Explore Now</button></a>
+        </div>
+    </section>
+
+</body>
+</html>
