@@ -147,7 +147,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($row['user_type'] == 0) {
             header("Location: /HomelyBakes/baker/baker_dashboard.php");
         } else if ($row['user_type'] == 1) {
-            header("Location: /HomelyBakes/product.php");
+            // Check if customer has completed their profile
+            $check_profile_sql = "SELECT COUNT(*) as profile_exists FROM table_customer WHERE user_id = ?";
+            $check_profile_stmt = $conn->prepare($check_profile_sql);
+            $check_profile_stmt->bind_param("i", $row['user_id']);
+            $check_profile_stmt->execute();
+            $profile_result = $check_profile_stmt->get_result();
+            $profile_exists = $profile_result->fetch_assoc()['profile_exists'] > 0;
+
+            if (!$profile_exists) {
+                // New customer, redirect to profile completion
+                header("Location: /HomelyBakes/profile.php");
+            } else {
+                // Existing customer with complete profile
+                header("Location: /HomelyBakes/product.php");
+            }
         }
         else if($row['user_type'] == 2) {
             header("Location: /HomelyBakes/admin/admin_dashboard.php");

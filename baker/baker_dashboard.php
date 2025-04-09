@@ -79,25 +79,31 @@ if (isset($_SESSION['baker_id'])) {
     $stmt->execute();
     $analytics = $stmt->get_result()->fetch_assoc();
 
-    // Update monthly revenue query to include all orders
+    // Update monthly revenue query to include all orders from table_orders and table_product
     $monthly_revenue_query = "SELECT 
-        DATE_FORMAT(order_date, '%Y-%m') as month,
+        DATE_FORMAT(o.order_date, '%Y-%m') as month,
         COUNT(*) as order_count,
-        SUM(total_price) as revenue
-    FROM table_orders 
-    WHERE baker_id = ? 
-        AND order_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(order_date, '%Y-%m')
-    ORDER BY month ASC";
+        SUM(o.total_price) as revenue
+    FROM table_orders o
+    JOIN table_product p ON o.product_id = p.product_id
+    WHERE p.baker_id = ? 
+        AND o.order_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+        AND o.status != 'rejected'
+    GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
+    ORDER BY month DESC
+    LIMIT 6";
 
     $stmt = $conn->prepare($monthly_revenue_query);
-    $stmt->bind_param("i", $baker_id);
+    $stmt->bind_param("i", $_SESSION['baker_id']);
     $stmt->execute();
     $monthly_result = $stmt->get_result();
     $monthly_data = [];
     while ($row = $monthly_result->fetch_assoc()) {
         $monthly_data[] = $row;
     }
+
+    // Reverse the array to show oldest to newest
+    $monthly_data = array_reverse($monthly_data);
 
     // Update popular products query to include all orders
     $popular_products_query = "SELECT 
@@ -664,6 +670,180 @@ if (isset($_SESSION['baker_id'])) {
             grid-template-columns: 1fr;
         }
     }
+
+    /* Chat styles */
+    .chat-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 350px;
+        height: 500px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        display: none;
+        flex-direction: column;
+        z-index: 1000;
+    }
+
+    .chat-header {
+        padding: 15px;
+        background: #4CAF50;
+        color: white;
+        border-radius: 10px 10px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        padding: 15px;
+        overflow-y: auto;
+    }
+
+    .message {
+        margin-bottom: 10px;
+        max-width: 80%;
+    }
+
+    .message.sent {
+        margin-left: auto;
+        background: #4CAF50;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 15px 15px 0 15px;
+    }
+
+    .message.received {
+        margin-right: auto;
+        background: #f0f0f0;
+        padding: 8px 12px;
+        border-radius: 15px 15px 15px 0;
+    }
+
+    .chat-input {
+        padding: 15px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+    }
+
+    .chat-input input {
+        flex-grow: 1;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        outline: none;
+    }
+
+    .chat-input button {
+        padding: 8px 15px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+    }
+
+    .chat-input button:hover {
+        background: #45a049;
+    }
+
+    .chat-toggle {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 15px;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 999;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chat-toggle i {
+        font-size: 24px;
+    }
+
+    .existing-categories {
+        margin-top: 40px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .existing-categories h3 {
+        color: #333;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #4CAF50;
+    }
+
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .category-card {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .category-content h4 {
+        color: #333;
+        margin: 0 0 10px 0;
+        font-size: 1.1em;
+    }
+
+    .category-content p {
+        color: #666;
+        margin: 0;
+        font-size: 0.9em;
+        line-height: 1.4;
+    }
+
+    .delete-category-btn {
+        margin-top: 15px;
+        padding: 8px 12px;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        transition: background-color 0.2s ease;
+    }
+
+    .delete-category-btn:hover {
+        background-color: #c82333;
+    }
+
+    .delete-category-btn i {
+        font-size: 0.9em;
+    }
     </style>
 </head>
 <body>
@@ -851,7 +1031,9 @@ if (isset($_SESSION['baker_id'])) {
 
             <!-- Add Category Section -->
             <section id="add-category-section" class="section">
-                <h2>Add New Category</h2>
+                <h2>Categories Management</h2>
+                
+                <!-- Add Category Form -->
                 <form id="add-category-form" method="POST">
                     <div class="form-field">
                         <label for="category_name">Category Name</label>
@@ -866,6 +1048,33 @@ if (isset($_SESSION['baker_id'])) {
                     
                     <button type="submit">Add Category</button>
                 </form>
+
+                <!-- Existing Categories List -->
+                <div class="existing-categories">
+                    <h3>Existing Categories</h3>
+                    <div class="categories-grid" id="categories-list">
+                        <?php
+                        // Fetch categories for this baker
+                        $query = "SELECT category_id, category_name, description FROM table_category WHERE baker_id = ?";
+                        $stmt = mysqli_prepare($conn, $query);
+                        mysqli_stmt_bind_param($stmt, "i", $_SESSION['baker_id']);
+                        mysqli_stmt_execute($stmt);
+                        $result = mysqli_stmt_get_result($stmt);
+                        
+                        while ($category = mysqli_fetch_assoc($result)) {
+                            echo '<div class="category-card">';
+                            echo '<div class="category-content">';
+                            echo '<h4>' . htmlspecialchars($category['category_name']) . '</h4>';
+                            echo '<p>' . htmlspecialchars($category['description']) . '</p>';
+                            echo '</div>';
+                            echo '<button class="delete-category-btn" onclick="deleteCategory(' . $category['category_id'] . ')">';
+                            echo '<i class="fas fa-trash"></i> Delete';
+                            echo '</button>';
+                            echo '</div>';
+                        }
+                        ?>
+                    </div>
+                </div>
             </section>
 
             <!-- Orders Section -->
@@ -899,7 +1108,7 @@ if (isset($_SESSION['baker_id'])) {
             </section>
 
             <!-- Analytics Section -->
-            <div class="content-section" id="analytics-section" style="display: none;">
+            <div class="content-section" id="analytics-section">
                 <div class="analytics-container">
                     <h2 class="section-title">
                         <i class="fas fa-chart-line"></i>
@@ -929,7 +1138,7 @@ if (isset($_SESSION['baker_id'])) {
                         </div>
                     </div>
 
-                    <div class="chart-container">
+                    <div class="chart-container" style="height: 400px;">
                         <h3 class="chart-title">Monthly Revenue & Orders</h3>
                         <canvas id="revenueChart"></canvas>
                     </div>
@@ -967,6 +1176,26 @@ if (isset($_SESSION['baker_id'])) {
     <div id="duplicateNotification" class="notification">
         Category already exists!
     </div>
+
+    <!-- Chat Interface -->
+    <button class="chat-toggle" onclick="toggleChat()">
+        
+    </button>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="chat-header">
+            <span>Chat with Customer</span>
+            <i class="fas fa-times" onclick="toggleChat()" style="cursor: pointer;"></i>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will be loaded here -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         loadOrders('pending');
@@ -988,16 +1217,28 @@ if (isset($_SESSION['baker_id'])) {
             item.addEventListener('click', function() {
                 const section = this.getAttribute('data-section');
                 sections.forEach(s => {
-                    document.getElementById(`${s}-section`).style.display = 'none';
-                    document.querySelector(`[data-section="${s}"]`).classList.remove('active');
+                    const sectionElement = document.getElementById(`${s}-section`);
+                    const navItem = document.querySelector(`[data-section="${s}"]`);
+                    
+                    if (sectionElement) {
+                        if (s === section) {
+                            sectionElement.style.display = 'block';
+                            navItem.classList.add('active');
+                            if (s === 'analytics') {
+                                // Initialize chart when analytics section is shown
+                                initializeAnalyticsChart();
+                            }
+                        } else {
+                            sectionElement.style.display = 'none';
+                            navItem.classList.remove('active');
+                        }
+                    }
                 });
-                document.getElementById(`${section}-section`).style.display = 'block';
-                this.classList.add('active');
             });
         });
 
-        // If analytics is the current section, initialize the chart
-        if (document.querySelector('[data-section="analytics"]').classList.contains('active')) {
+        // Initialize chart if analytics section is active on page load
+        if (document.getElementById('analytics-section').style.display !== 'none') {
             initializeAnalyticsChart();
         }
 
@@ -1014,31 +1255,34 @@ if (isset($_SESSION['baker_id'])) {
     });
 
     function loadOrders(status) {
-    let endpoint = `get_baker_orders.php?status=${status}`;
-    
-    // Use different endpoint for paid orders
-    if (status === 'paid') {
-        endpoint = 'get_paid_orders.php';
+        let endpoint = `get_baker_orders.php?status=${status}`;
+        
+        // Use different endpoint for paid orders
+        if (status === 'paid') {
+            endpoint = 'get_paid_orders.php';
+        }
+        
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(orders => {
+                const ordersList = document.getElementById('orders-list');
+                ordersList.innerHTML = '';
+
+                if (orders.length === 0) {
+                    ordersList.innerHTML = `<p class="no-orders">No ${status} orders found</p>`;
+                    return;
+                }
+
+                // Sort orders by order_id in ascending order
+                orders.sort((a, b) => a.order_id - b.order_id);
+
+                orders.forEach(order => {
+                    const orderCard = createOrderCard(order, status);
+                    ordersList.appendChild(orderCard);
+                });
+            })
+            .catch(error => console.error('Error:', error));
     }
-    
-    fetch(endpoint)
-        .then(response => response.json())
-        .then(orders => {
-            const ordersList = document.getElementById('orders-list');
-            ordersList.innerHTML = '';
-
-            if (orders.length === 0) {
-                ordersList.innerHTML = `<p class="no-orders">No ${status} orders found</p>`;
-                return;
-            }
-
-            orders.forEach(order => {
-                const orderCard = createOrderCard(order, status);
-                ordersList.appendChild(orderCard);
-            });
-        })
-        .catch(error => console.error('Error:', error));
-}
 
     function makeAsPrepared(orderId) {
         if (!confirm('Are you sure you want to mark this order as prepared?')) return;
@@ -1100,6 +1344,8 @@ if (isset($_SESSION['baker_id'])) {
                 <span class="status-badge status-${order.status}">${order.status}</span>
             </div>
             <div class="order-details">
+                <p><strong>Customer:</strong> ${order.first_name} ${order.last_name}</p>
+                <p><strong>Mobile:</strong> ${order.mobile_number}</p>
                 <p><strong>Product:</strong> ${order.product_name}</p>
                 <p><strong>Quantity:</strong> ${order.quantity} kg</p>
                 <p><strong>Total Price:</strong> ₹${order.total_price}</p>
@@ -1141,6 +1387,10 @@ if (isset($_SESSION['baker_id'])) {
                     </button>
                 </div>
             ` : ''}
+            <!-- Add chat button -->
+            <button class="btn btn-primary" onclick="toggleChat(${order.order_id}, ${order.user_id})">
+                <i class="fas fa-comments"></i> Chat with Customer
+            </button>
         `;
         
         return card;
@@ -1173,14 +1423,38 @@ if (isset($_SESSION['baker_id'])) {
 
     function initializeAnalyticsChart() {
         const monthlyData = <?php echo json_encode($monthly_data); ?>;
+        console.log('Monthly Data:', monthlyData); // Debug log
+
+        if (!monthlyData || monthlyData.length === 0) {
+            console.log('No monthly data available');
+            return;
+        }
+
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) {
+            console.log('Canvas element not found');
+            return;
+        }
+
         const labels = monthlyData.map(item => {
             const [year, month] = item.month.split('-');
-            return new Date(year, month - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         });
-        const revenue = monthlyData.map(item => item.revenue);
-        const orderCounts = monthlyData.map(item => item.order_count);
+        
+        const revenue = monthlyData.map(item => parseFloat(item.revenue) || 0);
+        const orderCounts = monthlyData.map(item => parseInt(item.order_count) || 0);
 
-        const ctx = document.getElementById('revenueChart').getContext('2d');
+        console.log('Labels:', labels);
+        console.log('Revenue:', revenue);
+        console.log('Order Counts:', orderCounts);
+
+        // Destroy existing chart if it exists
+        const existingChart = Chart.getChart(ctx);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+
         new Chart(ctx, {
             type: 'bar',
             data: {
@@ -1203,21 +1477,29 @@ if (isset($_SESSION['baker_id'])) {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 interaction: {
                     intersect: false,
                     mode: 'index'
                 },
                 scales: {
                     y: {
+                        beginAtZero: true,
                         type: 'linear',
                         display: true,
                         position: 'left',
                         title: {
                             display: true,
                             text: 'Revenue (₹)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString();
+                            }
                         }
                     },
                     y1: {
+                        beginAtZero: true,
                         type: 'linear',
                         display: true,
                         position: 'right',
@@ -1227,6 +1509,24 @@ if (isset($_SESSION['baker_id'])) {
                         },
                         grid: {
                             drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.dataset.label === 'Revenue (₹)') {
+                                    label += '₹' + context.parsed.y.toLocaleString();
+                                } else {
+                                    label += context.parsed.y;
+                                }
+                                return label;
+                            }
                         }
                     }
                 }
@@ -1380,7 +1680,7 @@ if (isset($_SESSION['baker_id'])) {
                 titleElement.textContent = 'Add New Product';
             }
         });
-}
+    }
        
           
 
@@ -1549,6 +1849,133 @@ if (isset($_SESSION['baker_id'])) {
             }
         })
         .catch(error => console.error('Error:', error));
+    }
+
+    let currentOrderId = null;
+    let currentCustomerId = null;
+    let chatInterval = null;
+
+    function toggleChat(orderId = null, customerId = null) {
+        const chatContainer = document.getElementById('chatContainer');
+        const isVisible = chatContainer.style.display === 'flex';
+        
+        if (orderId) {
+            currentOrderId = orderId;
+            currentCustomerId = customerId;
+            chatContainer.style.display = 'flex';
+            loadMessages();
+            // Start polling for new messages
+            if (chatInterval) clearInterval(chatInterval);
+            chatInterval = setInterval(loadMessages, 5000);
+        } else {
+            chatContainer.style.display = isVisible ? 'none' : 'flex';
+            if (isVisible && chatInterval) {
+                clearInterval(chatInterval);
+                chatInterval = null;
+            }
+        }
+    }
+
+    function loadMessages() {
+        if (!currentOrderId) return;
+        
+        fetch(`../chat_api.php?order_id=${currentOrderId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.messages) {
+                    const chatMessages = document.getElementById('chatMessages');
+                    chatMessages.innerHTML = '';
+                    
+                    data.messages.forEach(message => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = `message ${message.sender_id === <?php echo $_SESSION['user_id']; ?> ? 'sent' : 'received'}`;
+                        messageDiv.textContent = message.message;
+                        chatMessages.appendChild(messageDiv);
+                    });
+                    
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            })
+            .catch(error => console.error('Error loading messages:', error));
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (!message || !currentOrderId || !currentCustomerId) return;
+        
+        fetch('../chat_api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                order_id: currentOrderId,
+                receiver_id: currentCustomerId,
+                message: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageInput.value = '';
+                loadMessages();
+            }
+        })
+        .catch(error => console.error('Error sending message:', error));
+    }
+
+    // Add event listener for Enter key in message input
+    document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    // Add this JavaScript function for category deletion
+    function deleteCategory(categoryId) {
+        if (!confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+            return;
+        }
+
+        fetch('delete_category.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                category_id: categoryId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success notification
+                const notification = document.getElementById('duplicateNotification');
+                notification.textContent = 'Category deleted successfully!';
+                notification.style.backgroundColor = '#4CAF50';
+                notification.style.display = 'block';
+                
+                // Refresh the categories list
+                location.reload();
+            } else {
+                throw new Error(data.error || 'Failed to delete category');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const notification = document.getElementById('duplicateNotification');
+            notification.textContent = error.message || 'Error deleting category';
+            notification.style.backgroundColor = '#ff6b6b';
+            notification.style.display = 'block';
+        })
+        .finally(() => {
+            setTimeout(() => {
+                const notification = document.getElementById('duplicateNotification');
+                notification.style.display = 'none';
+            }, 3000);
+        });
     }
     </script>
 </body>

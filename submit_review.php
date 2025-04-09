@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $conn->begin_transaction();
 
         // Insert review
-        $stmt = $conn->prepare("INSERT INTO table_reviews (order_id, user_id, rating, review_text, review_date) VALUES (?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO table_reviews (order_id, user_id, rating, comment, created_at) VALUES (?, ?, ?, ?, NOW())");
         $stmt->bind_param("iiis", $order_id, $user_id, $rating, $review_text);
         $stmt->execute();
 

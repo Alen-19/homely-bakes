@@ -10,11 +10,13 @@ if (!isset($_SESSION['baker_id'])) {
 $status = $_GET['status'] ?? 'pending';
 $baker_id = $_SESSION['baker_id'];
 
-$query = "SELECT o.*, p.product_name 
-          FROM table_orders o
-          JOIN table_product p ON o.product_id = p.product_id
-          WHERE o.baker_id = ? AND o.status = ?
-          ORDER BY o.order_date DESC";
+$query = "SELECT o.*, p.product_name, p.image_url, 
+          r.first_name, r.last_name, r.mobile_number 
+          FROM table_orders o 
+          JOIN table_product p ON o.product_id = p.product_id 
+          JOIN table_registration r ON o.user_id = r.user_id 
+          WHERE p.baker_id = ? AND o.status = ?
+          ORDER BY o.order_id ASC";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param("is", $baker_id, $status);

@@ -20,7 +20,7 @@ if (!file_exists(UPLOAD_DIR)) {
     chmod(UPLOAD_DIR, 0777);
 }
 
-// Check if user is logged in
+// Check if user is logged in and is a customer
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_type'] != 1) {
     header("Location: login.php");
     exit();
@@ -29,11 +29,23 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['user_type'] != 1) {
 $success_message = "";
 $error_message = "";
 
+// Fetch current user details before form submission
+$fetch_sql = "SELECT r.*, c.alt_phone, c.profile_photo, l.email 
+              FROM table_registration r 
+              LEFT JOIN table_customer c ON r.user_id = c.user_id 
+              LEFT JOIN table_login l ON r.user_id = l.user_id 
+              WHERE r.user_id = ?";
+$fetch_stmt = $conn->prepare($fetch_sql);
+$fetch_stmt->bind_param("i", $user_id);
+$fetch_stmt->execute();
+$user_details = $fetch_stmt->get_result()->fetch_assoc();
+
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Validate inputs
     $first_name = trim($_POST['first_name']);
     $last_name = trim($_POST['last_name']);
-    $mobile_number = trim($_POST['phone']); 
+    $mobile_number = trim($_POST['phone']);
     $alt_phone = trim($_POST['alt_phone']);
     $street_address = trim($_POST['street_address']);
     $city = trim($_POST['city']);
@@ -42,7 +54,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $country = trim($_POST['country']);
     $pincode = trim($_POST['pincode']);
 
-    // Validate inputs
     if (strlen($first_name) < 2 || strlen($last_name) < 2) {
         $error_message = "First name and last name must be at least 2 characters long.";
     } elseif (!preg_match("/^[0-9]{10}$/", $mobile_number)) {
@@ -52,142 +63,127 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (!preg_match("/^[0-9]{6}$/", $pincode)) {
         $error_message = "PIN code must be exactly 6 digits.";
     }
-    
-    // Handle file upload
+
+    // Handle profile photo upload
+    $profile_photo_url = $user_details['profile_photo']; // Keep existing photo by default
     if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
-        $fileTmpPath = $_FILES['profile_photo']['tmp_name'];
-        $fileName = $_FILES['profile_photo']['name'];
-        $fileSize = $_FILES['profile_photo']['size'];
-        $fileType = $_FILES['profile_photo']['type'];
-        $fileNameCmps = explode('.', $fileName);
-        $fileExtension = strtolower(end($fileNameCmps));
+        $file = $_FILES['profile_photo'];
+        $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
 
-        // Sanitize file name
-        $newFileName = md5(time() . $fileName) . '.' . $fileExtension;
-
-        // Check file size
-        if ($fileSize > MAX_FILE_SIZE) {
-            $error_message = 'File size exceeds the maximum limit of 5MB.';
+        if (!in_array($file_extension, $allowed_types)) {
+            $error_message = "Only JPG, PNG, and GIF files are allowed.";
+        } elseif ($file['size'] > MAX_FILE_SIZE) {
+            $error_message = "File size must not exceed 5MB.";
         } else {
-            $dest_path = UPLOAD_DIR . $newFileName;
-            
-            if(move_uploaded_file($fileTmpPath, $dest_path)) {
-                // Update database with new profile photo URL
-                $profile_photo_url = 'uploads/profile_photos/' . $newFileName;
-                $sql = "UPDATE table_customer SET profile_photo = ? WHERE user_id = ?";
-                $stmt = $conn->prepare($sql);
-                $stmt->bind_param('si', $profile_photo_url, $user_id);
-                $stmt->execute();
+            $new_filename = uniqid('profile_') . '.' . $file_extension;
+            $upload_path = UPLOAD_DIR . $new_filename;
 
-                if ($stmt->affected_rows > 0) {
-                    $success_message = 'Profile photo updated successfully.';
-                } else {
-                    $error_message = 'Failed to update profile photo in the database.';
+            if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+                // Delete old profile photo if exists
+                if (!empty($profile_photo_url) && file_exists($profile_photo_url)) {
+                    unlink($profile_photo_url);
                 }
-
-                $stmt->close();
+                $profile_photo_url = 'uploads/profile_photos/' . $new_filename;
             } else {
-                $error_message = 'There was an error moving the uploaded file.';
+                $error_message = "Failed to upload profile photo.";
             }
         }
     }
-    
-    if (!isset($error_message)) {
-        // Start transaction
-        $conn->begin_transaction();
-        
-        try {
-            error_log("Debug - Starting profile update for user_id: " . $user_id);
 
-            // Update registration table
-            $sql1 = "UPDATE table_registration SET 
-                    first_name = ?,
-                    last_name = ?,
-                    mobile_number = ?,
-                    street_address = ?,
-                    city = ?,
-                    district = ?,
-                    state = ?,
-                    country = ?,
-                    pincode = ?
-                    WHERE user_id = ?";
-                    
-            $stmt1 = $conn->prepare($sql1);
-            $stmt1->bind_param("sssssssssi", $first_name, $last_name, $mobile_number, $street_address, $city, $district, $state, $country, $pincode, $user_id);
+    // If no errors, update the database
+    if (empty($error_message)) {
+        try {
+            $conn->begin_transaction();
+
+            // Update table_registration
+            $update_reg_sql = "UPDATE table_registration SET 
+                first_name = ?, 
+                last_name = ?, 
+                mobile_number = ?,
+                street_address = ?,
+                city = ?,
+                district = ?,
+                state = ?,
+                country = ?,
+                pincode = ?
+                WHERE user_id = ?";
             
-            if (!$stmt1->execute()) {
-                throw new Exception("Failed to update registration: " . $stmt1->error);
-            }
-            
+            $update_reg_stmt = $conn->prepare($update_reg_sql);
+            $update_reg_stmt->bind_param("sssssssssi", 
+                $first_name, $last_name, $mobile_number, 
+                $street_address, $city, $district, 
+                $state, $country, $pincode, $user_id
+            );
+            $update_reg_stmt->execute();
+
             // Check if customer record exists
             $check_sql = "SELECT COUNT(*) as count FROM table_customer WHERE user_id = ?";
             $check_stmt = $conn->prepare($check_sql);
             $check_stmt->bind_param("i", $user_id);
             $check_stmt->execute();
-            $check_result = $check_stmt->get_result();
-            $exists = $check_result->fetch_assoc()['count'] > 0;
-            
-            error_log("Debug - Customer record exists: " . ($exists ? 'Yes' : 'No'));
-            
+            $exists = $check_stmt->get_result()->fetch_assoc()['count'] > 0;
+
             if ($exists) {
                 // Update existing customer record
-                $sql2 = "UPDATE table_customer SET alt_phone = ? WHERE user_id = ?";
-                $stmt2 = $conn->prepare($sql2);
-                $stmt2->bind_param("si", $alt_phone, $user_id);
+                $update_cust_sql = "UPDATE table_customer SET 
+                    alt_phone = ?, 
+                    profile_photo = ? 
+                    WHERE user_id = ?";
+                $update_cust_stmt = $conn->prepare($update_cust_sql);
+                $update_cust_stmt->bind_param("ssi", 
+                    $alt_phone, $profile_photo_url, $user_id
+                );
             } else {
                 // Insert new customer record
-                $sql2 = "INSERT INTO table_customer (user_id, alt_phone) VALUES (?, ?)";
-                $stmt2 = $conn->prepare($sql2);
-                $stmt2->bind_param("is", $user_id, $alt_phone);
+                $insert_cust_sql = "INSERT INTO table_customer 
+                    (user_id, alt_phone, profile_photo) 
+                    VALUES (?, ?, ?)";
+                $update_cust_stmt = $conn->prepare($insert_cust_sql);
+                $update_cust_stmt->bind_param("iss", 
+                    $user_id, $alt_phone, $profile_photo_url
+                );
             }
-            
-            if (!$stmt2->execute()) {
-                throw new Exception("Failed to update customer record: " . $stmt2->error);
-            }
-            
-            // Verify the update
-            $verify_sql = "SELECT profile_photo FROM table_customer WHERE user_id = ?";
-            $verify_stmt = $conn->prepare($verify_sql);
-            $verify_stmt->bind_param("i", $user_id);
-            $verify_stmt->execute();
-            $verify_result = $verify_stmt->get_result();
-            $verify_data = $verify_result->fetch_assoc();
-            error_log("Debug - After update, profile_photo in DB: " . ($verify_data['profile_photo'] ?? 'NULL'));
+            $update_cust_stmt->execute();
 
-            // Commit transaction
             $conn->commit();
-            error_log("Debug - Transaction committed successfully");
             
+            // Update all necessary session data
+            $_SESSION['logged_in'] = true;
+            $_SESSION['user_id'] = $user_id;
+            $_SESSION['user_type'] = 1; // 1 for customer
             $_SESSION['firstname'] = $first_name;
             $_SESSION['username'] = $first_name;
+            $_SESSION['email'] = $user_details['email'];
+            $_SESSION['mobile_number'] = $mobile_number;
+            $_SESSION['profile_photo'] = $profile_photo_url;
+            
             $success_message = "Profile updated successfully!";
             
+            // Redirect to products page after successful update
+            header("Location: product.php");
+            exit();
+            
         } catch (Exception $e) {
-            // Rollback transaction on error
             $conn->rollback();
-            error_log("Debug - Error in transaction: " . $e->getMessage());
             $error_message = "Error updating profile: " . $e->getMessage();
         }
     }
 }
 
-// Fetch current user details including profile photo and email
-$sql = "SELECT r.first_name, r.last_name, r.mobile_number, r.street_address, r.city, r.district, 
-        r.state, r.country, r.pincode, c.alt_phone, c.profile_photo, l.email
-        FROM table_registration r
-        JOIN table_customer c ON r.user_id = c.user_id
-        JOIN table_login l ON r.user_id = l.user_id
-        WHERE r.user_id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$user_details = $result->fetch_assoc();
+// Set default profile photo if none exists
+$profile_photo_path = !empty($user_details['profile_photo']) 
+    ? $user_details['profile_photo'] 
+    : 'assets/images/default-profile.svg';
 
-$profile_photo_path = $user_details['profile_photo'] ?? 'assets/images/default-profile.svg';
 $email = $user_details['email'] ?? 'Not Available';
 
-$stmt->close();
+// Close all prepared statements
+if (isset($fetch_stmt)) $fetch_stmt->close();
+if (isset($update_reg_stmt)) $update_reg_stmt->close();
+if (isset($check_stmt)) $check_stmt->close();
+if (isset($update_cust_stmt)) $update_cust_stmt->close();
+
 ?>
 
 <!DOCTYPE html>
@@ -205,28 +201,42 @@ $stmt->close();
         <div class="profile-container">
             <div class="profile-header">
                 <h1>My Profile</h1>
-                <p>View and update your personal information</p>
+                <?php if (!isset($user_details['alt_phone'])): ?>
+                    <div class="welcome-message">
+                        <p>Welcome to Homely Bakes! Please complete your profile to start shopping.</p>
+                        <p>All fields marked with * are required.</p>
+                    </div>
+                <?php else: ?>
+                    <p>View and update your personal information</p>
+                <?php endif; ?>
             </div>
             
             <div class="profile-content">
                 <?php if (!empty($success_message)): ?>
-                    <div class="success-message" style="display: block;">
+                    <div class="success-message">
                         <?php echo htmlspecialchars($success_message); ?>
                     </div>
                 <?php endif; ?>
                 
                 <?php if (!empty($error_message)): ?>
-                    <div class="error-message" style="display: block;">
+                    <div class="error-message">
                         <?php echo htmlspecialchars($error_message); ?>
                     </div>
                 <?php endif; ?>
                 
-                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" enctype="multipart/form-data" id="profile-form" novalidate>
+                <form method="POST" enctype="multipart/form-data" id="profile-form">
                     <div class="profile-photo-section">
                         <div class="profile-photo-container" id="profile-photo-container">
-                            <img src="<?php echo htmlspecialchars($profile_photo_path); ?>" alt="Profile Photo" id="profile-photo-preview" class="profile-photo">
+                            <img src="<?php echo htmlspecialchars($profile_photo_path); ?>" 
+                                 alt="Profile Photo" 
+                                 id="profile-photo-preview" 
+                                 class="profile-photo">
                             <div class="profile-photo-upload">
-                                <input type="file" id="profile-photo-input" name="profile_photo" accept="image/jpeg,image/png,image/gif" class="profile-photo-input">
+                                <input type="file" 
+                                       id="profile-photo-input" 
+                                       name="profile_photo" 
+                                       accept="image/jpeg,image/png,image/gif" 
+                                       class="profile-photo-input">
                                 <label for="profile-photo-input">
                                     <i class="fas fa-camera"></i>
                                     <span>Change Photo</span>
@@ -235,109 +245,121 @@ $stmt->close();
                         </div>
                         <p class="profile-photo-help">Allowed formats: JPG, PNG, GIF. Max size: 5MB</p>
                     </div>
-                    
+
                     <div class="profile-section">
-                        <h2 class="section-title">Personal Information</h2>
+                        <h2>Personal Information</h2>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="first_name">First Name</label>
-                                <input type="text" id="first_name" name="first_name" 
-                                    value="<?php echo htmlspecialchars($user_details['first_name']); ?>" 
-                                    required minlength="2" pattern="[A-Za-z ]+" 
-                                    title="Please enter at least 2 characters, letters only"
-                                    class="form-control">
-                                <div class="invalid-feedback">Please enter a valid first name (minimum 2 characters, letters only)</div>
+                                <input type="text" 
+                                       id="first_name" 
+                                       name="first_name" 
+                                       value="<?php echo htmlspecialchars($user_details['first_name']); ?>" 
+                                       required>
                             </div>
                             <div class="form-group">
                                 <label for="last_name">Last Name</label>
-                                <input type="text" id="last_name" name="last_name" 
-                                    value="<?php echo htmlspecialchars($user_details['last_name']); ?>" 
-                                    required minlength="2" pattern="[A-Za-z ]+"
-                                    title="Please enter at least 2 characters, letters only"
-                                    class="form-control">
-                                <div class="invalid-feedback">Please enter a valid last name (minimum 2 characters, letters only)</div>
+                                <input type="text" 
+                                       id="last_name" 
+                                       name="last_name" 
+                                       value="<?php echo htmlspecialchars($user_details['last_name']); ?>" 
+                                       required>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="profile-section">
-                        <h2 class="section-title">Contact Information</h2>
+                        <h2>Contact Information</h2>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="email">Email Address</label>
-                                <input type="email" id="email" name="email" 
-                                    value="<?php echo htmlspecialchars($email); ?>" 
-                                    readonly class="form-control">
+                                <input type="email" 
+                                       id="email" 
+                                       value="<?php echo htmlspecialchars($email); ?>" 
+                                       readonly>
                             </div>
                             <div class="form-group">
                                 <label for="phone">Primary Phone Number</label>
-                                <input type="tel" id="phone" name="phone" 
-                                    value="<?php echo htmlspecialchars($user_details['mobile_number']); ?>" 
-                                    required pattern="[0-9]{10}" maxlength="10"
-                                    title="Please enter exactly 10 digits"
-                                    class="form-control">
-                                <div class="invalid-feedback">Please enter a valid 10-digit phone number</div>
+                                <input type="tel" 
+                                       id="phone" 
+                                       name="phone" 
+                                       value="<?php echo htmlspecialchars($user_details['mobile_number']); ?>" 
+                                       required 
+                                       pattern="[0-9]{10}" 
+                                       maxlength="10">
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="alt_phone">Alternate Phone Number (Optional)</label>
-                            <input type="tel" id="alt_phone" name="alt_phone" 
-                                value="<?php echo !empty($user_details['alt_phone']) ? htmlspecialchars($user_details['alt_phone']) : ''; ?>"
-                                pattern="[0-9]{10}" maxlength="10"
-                                title="Please enter exactly 10 digits"
-                                class="form-control">
-                            <div class="invalid-feedback">Please enter a valid 10-digit phone number</div>
+                            <input type="tel" 
+                                   id="alt_phone" 
+                                   name="alt_phone" 
+                                   value="<?php echo htmlspecialchars($user_details['alt_phone'] ?? ''); ?>" 
+                                   pattern="[0-9]{10}" 
+                                   maxlength="10">
                         </div>
                     </div>
+
                     <div class="profile-section">
-                        <h2 class="section-title">Address Information</h2>
+                        <h2>Address Information</h2>
                         <div class="form-group">
                             <label for="street_address">House Name / Street Address</label>
-                            <input type="text" id="street_address" name="street_address" 
-                                value="<?php echo htmlspecialchars($user_details['street_address']); ?>" 
-                                required class="form-control">
+                            <input type="text" 
+                                   id="street_address" 
+                                   name="street_address" 
+                                   value="<?php echo htmlspecialchars($user_details['street_address']); ?>" 
+                                   required>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="city">City</label>
-                                <input type="text" id="city" name="city" 
-                                    value="<?php echo htmlspecialchars($user_details['city']); ?>" 
-                                    required class="form-control">
+                                <input type="text" 
+                                       id="city" 
+                                       name="city" 
+                                       value="<?php echo htmlspecialchars($user_details['city']); ?>" 
+                                       required>
                             </div>
                             <div class="form-group">
                                 <label for="district">District</label>
-                                <input type="text" id="district" name="district" 
-                                    value="<?php echo htmlspecialchars($user_details['district']); ?>" 
-                                    required class="form-control">
+                                <input type="text" 
+                                       id="district" 
+                                       name="district" 
+                                       value="<?php echo htmlspecialchars($user_details['district']); ?>" 
+                                       required>
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="state">State</label>
-                                <input type="text" id="state" name="state" 
-                                    value="<?php echo htmlspecialchars($user_details['state']); ?>" 
-                                    required class="form-control">
+                                <input type="text" 
+                                       id="state" 
+                                       name="state" 
+                                       value="<?php echo htmlspecialchars($user_details['state']); ?>" 
+                                       required>
                             </div>
                             <div class="form-group">
                                 <label for="country">Country</label>
-                                <input type="text" id="country" name="country" 
-                                    value="<?php echo htmlspecialchars($user_details['country'] ?? 'India'); ?>" 
-                                    required class="form-control">
+                                <input type="text" 
+                                       id="country" 
+                                       name="country" 
+                                       value="<?php echo htmlspecialchars($user_details['country']); ?>" 
+                                       required>
                             </div>
                         </div>
                         <div class="form-group">
                             <label for="pincode">PIN Code</label>
-                            <input type="text" id="pincode" name="pincode" 
-                                value="<?php echo htmlspecialchars($user_details['pincode']); ?>" 
-                                required pattern="[0-9]{6}" maxlength="6"
-                                title="Please enter exactly 6 digits"
-                                class="form-control">
-                            <div class="invalid-feedback">Please enter a valid 6-digit PIN code</div>
+                            <input type="text" 
+                                   id="pincode" 
+                                   name="pincode" 
+                                   value="<?php echo htmlspecialchars($user_details['pincode']); ?>" 
+                                   required 
+                                   pattern="[0-9]{6}" 
+                                   maxlength="6">
                         </div>
                     </div>
-                    
+
                     <div class="profile-actions">
-                        <button type="button" class="btn btn-secondary" onclick="window.location.href='product.php'">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='products.php'">
                             Cancel
                         </button>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -345,99 +367,77 @@ $stmt->close();
                 </form>
             </div>
         </div>
-        
     </div>
 
     <script>
-        // Form validation
+    document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('profile-form');
+        const photoInput = document.getElementById('profile-photo-input');
+        const photoPreview = document.getElementById('profile-photo-preview');
         
-        // Only show validation on form submission
-        form.addEventListener('submit', function(e) {
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            this.classList.add('was-validated');
-        });
-
-        // Preview profile photo before upload
-        document.getElementById('profile-photo-input').addEventListener('change', function(e) {
+        // Profile photo preview
+        photoInput.addEventListener('change', function(e) {
             if (e.target.files && e.target.files[0]) {
                 const file = e.target.files[0];
-                const reader = new FileReader();
-                const preview = document.getElementById('profile-photo-preview');
-                const uploadLabel = document.querySelector('.profile-photo-upload span');
-                const container = document.getElementById('profile-photo-container');
                 
-                // Check file size (max 5MB)
+                // Validate file size
                 if (file.size > 5 * 1024 * 1024) {
-                    alert('File size too large. Please select an image under 5MB.');
-                    e.target.value = ''; // Clear the input
+                    alert('File size must not exceed 5MB');
+                    this.value = '';
                     return;
                 }
                 
-                // Check file type
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                if (!allowedTypes.includes(file.type)) {
-                    alert('Invalid file type. Please select a JPG, PNG, or GIF file.');
-                    e.target.value = ''; // Clear the input
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Only JPG, PNG and GIF files are allowed');
+                    this.value = '';
                     return;
                 }
                 
+                // Show preview
+                const reader = new FileReader();
                 reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    container.classList.add('has-image');
-                    uploadLabel.textContent = 'Change Photo';
+                    photoPreview.src = e.target.result;
                 }
                 reader.readAsDataURL(file);
             }
         });
-
-        // Auto-hide messages
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.getElementById('profile-photo-container');
-            const preview = document.getElementById('profile-photo-preview');
+        
+        // Form validation
+        form.addEventListener('submit', function(e) {
+            const phone = document.getElementById('phone').value;
+            const altPhone = document.getElementById('alt_phone').value;
+            const pincode = document.getElementById('pincode').value;
             
-            // Add has-image class if there's an existing image
-            if (preview.src && !preview.src.includes('assets/images/default-profile.svg')) {
-                container.classList.add('has-image');
+            if (!/^[0-9]{10}$/.test(phone)) {
+                e.preventDefault();
+                alert('Please enter a valid 10-digit phone number');
+                return;
             }
             
-            // Auto-hide messages after 5 seconds
-            const messages = document.querySelectorAll('.success-message, .error-message');
-            messages.forEach(msg => {
-                if (msg) {
-                    setTimeout(() => {
-                        msg.style.opacity = '0';
-                        setTimeout(() => msg.style.display = 'none', 300);
-                    }, 5000);
-                }
-            });
-
-            // Add input event listeners for real-time validation only after user interaction
-            const inputs = document.querySelectorAll('input[pattern]');
-            inputs.forEach(input => {
-                // Only show validation after first interaction
-                input.addEventListener('blur', function() {
-                    this.dataset.touched = 'true';
-                });
-
-                input.addEventListener('input', function() {
-                    // Only validate if the field has been touched
-                    if (this.dataset.touched === 'true') {
-                        if (this.checkValidity()) {
-                            this.classList.remove('is-invalid');
-                            this.classList.add('is-valid');
-                        } else {
-                            this.classList.remove('is-valid');
-                            this.classList.add('is-invalid');
-                        }
-                    }
-                });
-            });
+            if (altPhone && !/^[0-9]{10}$/.test(altPhone)) {
+                e.preventDefault();
+                alert('Please enter a valid 10-digit alternate phone number');
+                return;
+            }
+            
+            if (!/^[0-9]{6}$/.test(pincode)) {
+                e.preventDefault();
+                alert('Please enter a valid 6-digit PIN code');
+                return;
+            }
         });
+        
+        // Auto-hide messages after 5 seconds
+        const messages = document.querySelectorAll('.success-message, .error-message');
+        messages.forEach(msg => {
+            setTimeout(() => {
+                msg.style.opacity = '0';
+                setTimeout(() => msg.style.display = 'none', 300);
+            }, 5000);
+        });
+    });
     </script>
 </body>
 </html>

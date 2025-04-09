@@ -118,7 +118,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $update_registration_sql = "UPDATE table_registration SET first_name=?, last_name=?, mobile_number=?, street_address=?, city=?, district=?, state=?, country=?, pincode=? WHERE user_id=?";
         $update_registration_stmt = $conn->prepare($update_registration_sql);
         $update_registration_stmt->bind_param("sssssssssi", $firstname, $lastname, $mobile_number, $street_address, $city, $district, $state, $country, $pincode, $registration['user_id']);
-        $update_registration_stmt->execute();
+        $registration_success = $update_registration_stmt->execute();
 
         // Update or insert baker profile
         $bakery_name = $_POST['bakery_name'];
@@ -155,7 +155,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         // Insert or Update logic
-        if (empty($error)) {
+        if (empty($error) && $registration_success) {
             if ($baker) {
                 // Update existing baker profile
                 $update_baker_sql = "UPDATE table_baker SET bakery_name=?, description=?, business_license=?, profile_image=?, availability_status=? WHERE user_id=?";
@@ -169,14 +169,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
 
             if ($update_baker_stmt->execute()) {
+                // Update session data with essential information
+                $_SESSION['logged_in'] = true;
+                $_SESSION['user_id'] = $user_id;
+                $_SESSION['user_type'] = '0'; // 0 for baker
+                $_SESSION['firstname'] = $firstname;
+                $_SESSION['username'] = $firstname;
+                $_SESSION['bakery_name'] = $bakery_name;
+                $_SESSION['availability_status'] = $availability_status;
+                $_SESSION['baker_id'] = $baker ? $baker['baker_id'] : $user_id; // Use existing baker_id or user_id as baker_id
+                
+                // Clear the new_baker flag since profile is now complete
+                unset($_SESSION['new_baker']);
+
+                // Clear output buffer and redirect to baker dashboard
+                if (ob_get_length()) ob_end_clean();
                 header("Location: baker_dashboard.php");
                 exit();
             } else {
-                $error = "Error saving baker information. Please try again.";
+                $errors[] = "Error saving baker information: " . $update_baker_stmt->error;
+                error_log("Baker profile save failed: " . $update_baker_stmt->error);
+            }
+        } else {
+            if (!$registration_success) {
+                $errors[] = "Error updating registration details: " . $update_registration_stmt->error;
+                error_log("Registration update failed: " . $update_registration_stmt->error);
+            }
+            if (!empty($error)) {
+                $errors[] = $error;
             }
         }
     }
 }
+
 
 ?>
 
@@ -444,7 +469,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!isValid) {
             e.preventDefault();
             alert('Please fix the errors in the form before submitting.');
+            return false;
         }
+        
+        // If form is valid, let it submit normally
+        return true;
     });
     
     // File input validation

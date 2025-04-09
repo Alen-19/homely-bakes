@@ -18,7 +18,7 @@ $query = "SELECT o.*, p.product_name, p.image_url,
           JOIN table_registration c ON o.user_id = c.user_id
           LEFT JOIN table_payments pay ON o.order_id = pay.order_id
           WHERE o.baker_id = ?
-          ORDER BY o.order_date DESC";
+          ORDER BY o.order_id DESC";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $baker_id);

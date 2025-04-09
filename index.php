@@ -60,5 +60,21 @@
         </div>
     </section>
 
+    <!-- Fetch chart data -->
+    <script>
+    fetch('get_chart_data.php')
+        .then(response => response.json())
+        .then(data => {
+            // Update Sales Chart
+            salesChart.data.datasets[0].data = data.sales;
+            salesChart.update();
+
+            // Update Orders Chart
+            ordersChart.data.datasets[0].data = Object.values(data.orders);
+            ordersChart.update();
+        })
+        .catch(error => console.error('Error fetching chart data:', error));
+    </script>
+
 </body>
 </html>

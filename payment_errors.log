@@ -2944,3 +2944,549 @@ Stack trace:
 [04-Apr-2025 18:47:40 Europe/Berlin] Razorpay Payment ID: pay_QF3GL4bXNAnC7G
 [04-Apr-2025 18:47:40 Europe/Berlin] Razorpay Order ID: order_QF3G1kNgPMfa4K
 [04-Apr-2025 18:47:40 Europe/Berlin] Amount: 1525
+[06-Apr-2025 10:09:15 Europe/Berlin] Creating Razorpay order for Order ID: 92, Amount: 1025
+[06-Apr-2025 10:09:17 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 102500
+    [amount_due] => 102500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1743926956
+    [currency] => INR
+    [entity] => order
+    [id] => order_QFhVG7XH6Sya1k
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_92
+    [status] => created
+)
+
+[06-Apr-2025 10:09:45 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QFhVUH8xObCncv","razorpay_order_id":"order_QFhVG7XH6Sya1k","razorpay_signature":"74704798e801a7c3f26439a0eefc955e62ba3f0181e1a1ce88348dd514063059","order_id":92}
+[06-Apr-2025 10:09:45 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QFhVUH8xObCncv
+    [razorpay_order_id] => order_QFhVG7XH6Sya1k
+    [razorpay_signature] => 74704798e801a7c3f26439a0eefc955e62ba3f0181e1a1ce88348dd514063059
+    [order_id] => 92
+)
+
+[06-Apr-2025 10:09:47 Europe/Berlin] Payment details fetched from Razorpay: Array
+(
+    [id] => pay_QFhVUH8xObCncv
+    [entity] => payment
+    [amount] => 102500
+    [currency] => INR
+    [status] => captured
+    [order_id] => order_QFhVG7XH6Sya1k
+    [invoice_id] => 
+    [international] => 
+    [method] => upi
+    [amount_refunded] => 0
+    [refund_status] => 
+    [captured] => 1
+    [description] => Payment for Vancho Creme
+    [card_id] => 
+    [bank] => 
+    [wallet] => 
+    [vpa] => kuriakosealen29@oksbi
+    [email] => void@razorpay.com
+    [contact] => +919856324253
+    [notes] => Array
+        (
+        )
+
+    [fee] => 2420
+    [tax] => 370
+    [error_code] => 
+    [error_description] => 
+    [error_source] => 
+    [error_step] => 
+    [error_reason] => 
+    [acquirer_data] => Array
+        (
+            [rrn] => 593329754186
+            [upi_transaction_id] => 2D047ED285871AA0CFAAE95523788F6D
+        )
+
+    [created_at] => 1743926970
+    [upi] => Array
+        (
+            [vpa] => kuriakosealen29@oksbi
+        )
+
+)
+
+[06-Apr-2025 10:09:47 Europe/Berlin] Payment successfully processed and stored:
+[06-Apr-2025 10:09:47 Europe/Berlin] Payment ID: PAY17439269872166
+[06-Apr-2025 10:09:47 Europe/Berlin] Razorpay Payment ID: pay_QFhVUH8xObCncv
+[06-Apr-2025 10:09:47 Europe/Berlin] Razorpay Order ID: order_QFhVG7XH6Sya1k
+[06-Apr-2025 10:09:47 Europe/Berlin] Amount: 1025
+[06-Apr-2025 15:20:22 Europe/Berlin] Creating Razorpay order for Order ID: 94, Amount: 525
+[06-Apr-2025 15:20:33 Europe/Berlin] Error creating Razorpay order: cURL error 28: Resolving timed out after 10011 milliseconds
+[06-Apr-2025 15:20:40 Europe/Berlin] Creating Razorpay order for Order ID: 94, Amount: 525
+[06-Apr-2025 15:20:43 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 52500
+    [amount_due] => 52500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1743945642
+    [currency] => INR
+    [entity] => order
+    [id] => order_QFmoEAe73O5Xo3
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_94
+    [status] => created
+)
+
+[06-Apr-2025 15:21:10 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QFmoSHzvduAx4b","razorpay_order_id":"order_QFmoEAe73O5Xo3","razorpay_signature":"f7b42b8194cc6b9fad6d77e88bf0d1bf9cc4cc76f5c0992871084ec34a6dde5b","order_id":94}
+[06-Apr-2025 15:21:10 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QFmoSHzvduAx4b
+    [razorpay_order_id] => order_QFmoEAe73O5Xo3
+    [razorpay_signature] => f7b42b8194cc6b9fad6d77e88bf0d1bf9cc4cc76f5c0992871084ec34a6dde5b
+    [order_id] => 94
+)
+
+[06-Apr-2025 15:21:21 Europe/Berlin] Payment processing error: cURL error 28: Resolving timed out after 10013 milliseconds
+[06-Apr-2025 15:21:28 Europe/Berlin] Creating Razorpay order for Order ID: 94, Amount: 525
+[06-Apr-2025 15:21:39 Europe/Berlin] Error creating Razorpay order: cURL error 28: Resolving timed out after 10005 milliseconds
+[06-Apr-2025 15:21:41 Europe/Berlin] Creating Razorpay order for Order ID: 94, Amount: 525
+[06-Apr-2025 15:21:42 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 52500
+    [amount_due] => 52500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1743945701
+    [currency] => INR
+    [entity] => order
+    [id] => order_QFmpHLyDb24Kkv
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_94
+    [status] => created
+)
+
+[06-Apr-2025 15:22:10 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QFmpV06MUxLlYw","razorpay_order_id":"order_QFmpHLyDb24Kkv","razorpay_signature":"76adf01fc61fcd5d2e39eae870bdc8f76fe11e4f1d31ee21ea11cf7b67bf275c","order_id":94}
+[06-Apr-2025 15:22:10 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QFmpV06MUxLlYw
+    [razorpay_order_id] => order_QFmpHLyDb24Kkv
+    [razorpay_signature] => 76adf01fc61fcd5d2e39eae870bdc8f76fe11e4f1d31ee21ea11cf7b67bf275c
+    [order_id] => 94
+)
+
+[06-Apr-2025 15:22:20 Europe/Berlin] Payment processing error: cURL error 28: Resolving timed out after 10004 milliseconds
+[06-Apr-2025 15:24:31 Europe/Berlin] Creating Razorpay order for Order ID: 94, Amount: 525
+[06-Apr-2025 15:24:43 Europe/Berlin] Error creating Razorpay order: cURL error 28: Resolving timed out after 10015 milliseconds
+[06-Apr-2025 15:57:02 Europe/Berlin] Creating Razorpay order for Order ID: 91, Amount: 1025
+[06-Apr-2025 15:57:05 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 102500
+    [amount_due] => 102500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1743947824
+    [currency] => INR
+    [entity] => order
+    [id] => order_QFnQeI8jc4HKdn
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_91
+    [status] => created
+)
+
+[06-Apr-2025 15:57:33 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QFnQsX9efqSDjV","razorpay_order_id":"order_QFnQeI8jc4HKdn","razorpay_signature":"d40f62b1dc5dfd47b8f4b554aabad1680ef0118a4ae48422cf790188d2374168","order_id":91}
+[06-Apr-2025 15:57:33 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QFnQsX9efqSDjV
+    [razorpay_order_id] => order_QFnQeI8jc4HKdn
+    [razorpay_signature] => d40f62b1dc5dfd47b8f4b554aabad1680ef0118a4ae48422cf790188d2374168
+    [order_id] => 91
+)
+
+[06-Apr-2025 15:57:35 Europe/Berlin] Payment details fetched from Razorpay: Array
+(
+    [id] => pay_QFnQsX9efqSDjV
+    [entity] => payment
+    [amount] => 102500
+    [currency] => INR
+    [status] => captured
+    [order_id] => order_QFnQeI8jc4HKdn
+    [invoice_id] => 
+    [international] => 
+    [method] => upi
+    [amount_refunded] => 0
+    [refund_status] => 
+    [captured] => 1
+    [description] => Payment for hahahah
+    [card_id] => 
+    [bank] => 
+    [wallet] => 
+    [vpa] => kuriakosealen29@oksbi
+    [email] => void@razorpay.com
+    [contact] => +918921169877
+    [notes] => Array
+        (
+        )
+
+    [fee] => 2420
+    [tax] => 370
+    [error_code] => 
+    [error_description] => 
+    [error_source] => 
+    [error_step] => 
+    [error_reason] => 
+    [acquirer_data] => Array
+        (
+            [rrn] => 113946138078
+            [upi_transaction_id] => AEB328B2DB4CCF3ED67EB87879BEBD5F
+        )
+
+    [created_at] => 1743947838
+    [upi] => Array
+        (
+            [vpa] => kuriakosealen29@oksbi
+        )
+
+)
+
+[06-Apr-2025 15:57:35 Europe/Berlin] Payment successfully processed and stored:
+[06-Apr-2025 15:57:35 Europe/Berlin] Payment ID: PAY17439478559245
+[06-Apr-2025 15:57:35 Europe/Berlin] Razorpay Payment ID: pay_QFnQsX9efqSDjV
+[06-Apr-2025 15:57:35 Europe/Berlin] Razorpay Order ID: order_QFnQeI8jc4HKdn
+[06-Apr-2025 15:57:35 Europe/Berlin] Amount: 1025
+[06-Apr-2025 15:57:59 Europe/Berlin] Creating Razorpay order for Order ID: 94, Amount: 525
+[06-Apr-2025 15:58:01 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 52500
+    [amount_due] => 52500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1743947880
+    [currency] => INR
+    [entity] => order
+    [id] => order_QFnRdH45wE0u7T
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_94
+    [status] => created
+)
+
+[06-Apr-2025 15:58:28 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QFnRqw89iY0Mld","razorpay_order_id":"order_QFnRdH45wE0u7T","razorpay_signature":"63bbe6f9c97ae374c37a7c3da36c5a8e1bb6dfb13b8bf444579de1d82c646408","order_id":94}
+[06-Apr-2025 15:58:28 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QFnRqw89iY0Mld
+    [razorpay_order_id] => order_QFnRdH45wE0u7T
+    [razorpay_signature] => 63bbe6f9c97ae374c37a7c3da36c5a8e1bb6dfb13b8bf444579de1d82c646408
+    [order_id] => 94
+)
+
+[06-Apr-2025 15:58:31 Europe/Berlin] Payment details fetched from Razorpay: Array
+(
+    [id] => pay_QFnRqw89iY0Mld
+    [entity] => payment
+    [amount] => 52500
+    [currency] => INR
+    [status] => captured
+    [order_id] => order_QFnRdH45wE0u7T
+    [invoice_id] => 
+    [international] => 
+    [method] => upi
+    [amount_refunded] => 0
+    [refund_status] => 
+    [captured] => 1
+    [description] => Payment for Mincho Vacho
+    [card_id] => 
+    [bank] => 
+    [wallet] => 
+    [vpa] => kuriakosealen29@oksbi
+    [email] => void@razorpay.com
+    [contact] => +918921169877
+    [notes] => Array
+        (
+        )
+
+    [fee] => 1240
+    [tax] => 190
+    [error_code] => 
+    [error_description] => 
+    [error_source] => 
+    [error_step] => 
+    [error_reason] => 
+    [acquirer_data] => Array
+        (
+            [rrn] => 199010204800
+            [upi_transaction_id] => 38F4872D62BF49DC550EE7B62FD3CEC2
+        )
+
+    [created_at] => 1743947893
+    [upi] => Array
+        (
+            [vpa] => kuriakosealen29@oksbi
+        )
+
+)
+
+[06-Apr-2025 15:58:31 Europe/Berlin] Payment successfully processed and stored:
+[06-Apr-2025 15:58:31 Europe/Berlin] Payment ID: PAY17439479118784
+[06-Apr-2025 15:58:31 Europe/Berlin] Razorpay Payment ID: pay_QFnRqw89iY0Mld
+[06-Apr-2025 15:58:31 Europe/Berlin] Razorpay Order ID: order_QFnRdH45wE0u7T
+[06-Apr-2025 15:58:31 Europe/Berlin] Amount: 525
+[07-Apr-2025 21:48:18 Europe/Berlin] Creating Razorpay order for Order ID: 95, Amount: 775
+[07-Apr-2025 21:48:21 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 77500
+    [amount_due] => 77500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1744055302
+    [currency] => INR
+    [entity] => order
+    [id] => order_QGHwqxm2Na0y2E
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_95
+    [status] => created
+)
+
+[07-Apr-2025 21:48:51 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QGHx8Tvd6VXLml","razorpay_order_id":"order_QGHwqxm2Na0y2E","razorpay_signature":"aec6c3d4cffd5ccf437f60cf1fafd15326912204778f02a4e995d9949d5bf727","order_id":95}
+[07-Apr-2025 21:48:51 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QGHx8Tvd6VXLml
+    [razorpay_order_id] => order_QGHwqxm2Na0y2E
+    [razorpay_signature] => aec6c3d4cffd5ccf437f60cf1fafd15326912204778f02a4e995d9949d5bf727
+    [order_id] => 95
+)
+
+[07-Apr-2025 21:48:53 Europe/Berlin] Payment details fetched from Razorpay: Array
+(
+    [id] => pay_QGHx8Tvd6VXLml
+    [entity] => payment
+    [amount] => 77500
+    [currency] => INR
+    [status] => captured
+    [order_id] => order_QGHwqxm2Na0y2E
+    [invoice_id] => 
+    [international] => 
+    [method] => upi
+    [amount_refunded] => 0
+    [refund_status] => 
+    [captured] => 1
+    [description] => Payment for Melting Choco
+    [card_id] => 
+    [bank] => 
+    [wallet] => 
+    [vpa] => kuriakosealen@oksbi
+    [email] => void@razorpay.com
+    [contact] => +919856324253
+    [notes] => Array
+        (
+        )
+
+    [fee] => 1830
+    [tax] => 280
+    [error_code] => 
+    [error_description] => 
+    [error_source] => 
+    [error_step] => 
+    [error_reason] => 
+    [acquirer_data] => Array
+        (
+            [rrn] => 467031234271
+            [upi_transaction_id] => AD7B614AFC8B160AF3B11D4785D73075
+        )
+
+    [created_at] => 1744055318
+    [upi] => Array
+        (
+            [vpa] => kuriakosealen@oksbi
+        )
+
+)
+
+[07-Apr-2025 21:48:53 Europe/Berlin] Payment successfully processed and stored:
+[07-Apr-2025 21:48:53 Europe/Berlin] Payment ID: PAY17440553337616
+[07-Apr-2025 21:48:53 Europe/Berlin] Razorpay Payment ID: pay_QGHx8Tvd6VXLml
+[07-Apr-2025 21:48:53 Europe/Berlin] Razorpay Order ID: order_QGHwqxm2Na0y2E
+[07-Apr-2025 21:48:53 Europe/Berlin] Amount: 775
+[09-Apr-2025 07:17:57 Europe/Berlin] Creating Razorpay order for Order ID: 96, Amount: 1025
+[09-Apr-2025 07:17:59 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 102500
+    [amount_due] => 102500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1744175881
+    [currency] => INR
+    [entity] => order
+    [id] => order_QGqBiOgzr164Ux
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_96
+    [status] => created
+)
+
+[09-Apr-2025 07:18:27 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QGqBwmN1Z1RQe0","razorpay_order_id":"order_QGqBiOgzr164Ux","razorpay_signature":"0c45b0dc6c0a14b6266e96f9b1b73d28c6438c4f2532732494de8e388b8201ea","order_id":96}
+[09-Apr-2025 07:18:27 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QGqBwmN1Z1RQe0
+    [razorpay_order_id] => order_QGqBiOgzr164Ux
+    [razorpay_signature] => 0c45b0dc6c0a14b6266e96f9b1b73d28c6438c4f2532732494de8e388b8201ea
+    [order_id] => 96
+)
+
+[09-Apr-2025 07:18:28 Europe/Berlin] Payment details fetched from Razorpay: Array
+(
+    [id] => pay_QGqBwmN1Z1RQe0
+    [entity] => payment
+    [amount] => 102500
+    [currency] => INR
+    [status] => captured
+    [order_id] => order_QGqBiOgzr164Ux
+    [invoice_id] => 
+    [international] => 
+    [method] => upi
+    [amount_refunded] => 0
+    [refund_status] => 
+    [captured] => 1
+    [description] => Payment for Vancho Creme
+    [card_id] => 
+    [bank] => 
+    [wallet] => 
+    [vpa] => kuriakosealen29@oksbi
+    [email] => kuriakosealen29@gmail.com
+    [contact] => +918921536547
+    [notes] => Array
+        (
+        )
+
+    [fee] => 2420
+    [tax] => 370
+    [error_code] => 
+    [error_description] => 
+    [error_source] => 
+    [error_step] => 
+    [error_reason] => 
+    [acquirer_data] => Array
+        (
+            [rrn] => 158106406038
+            [upi_transaction_id] => 2D5618B078D8837F1F5C012C7288E4B1
+        )
+
+    [created_at] => 1744175894
+    [upi] => Array
+        (
+            [vpa] => kuriakosealen29@oksbi
+        )
+
+)
+
+[09-Apr-2025 07:18:28 Europe/Berlin] Payment successfully processed and stored:
+[09-Apr-2025 07:18:28 Europe/Berlin] Payment ID: PAY17441759085579
+[09-Apr-2025 07:18:28 Europe/Berlin] Razorpay Payment ID: pay_QGqBwmN1Z1RQe0
+[09-Apr-2025 07:18:28 Europe/Berlin] Razorpay Order ID: order_QGqBiOgzr164Ux
+[09-Apr-2025 07:18:28 Europe/Berlin] Amount: 1025
+[09-Apr-2025 08:50:35 Europe/Berlin] Creating Razorpay order for Order ID: 97, Amount: 1025
+[09-Apr-2025 08:50:37 Europe/Berlin] Razorpay order created successfully: Array
+(
+    [amount] => 102500
+    [amount_due] => 102500
+    [amount_paid] => 0
+    [attempts] => 0
+    [created_at] => 1744181438
+    [currency] => INR
+    [entity] => order
+    [id] => order_QGrlYnaY08PBy7
+    [notes] => Array
+        (
+        )
+
+    [offer_id] => 
+    [receipt] => order_97
+    [status] => created
+)
+
+[09-Apr-2025 08:51:16 Europe/Berlin] Raw input received: {"razorpay_payment_id":"pay_QGrlyKvv6gly6C","razorpay_order_id":"order_QGrlYnaY08PBy7","razorpay_signature":"dff0421ba1ae58ec1b7e908e6ec43ccd5f77fdea6a977da75e075b45d0c819b0","order_id":97}
+[09-Apr-2025 08:51:16 Europe/Berlin] Decoded input: Array
+(
+    [razorpay_payment_id] => pay_QGrlyKvv6gly6C
+    [razorpay_order_id] => order_QGrlYnaY08PBy7
+    [razorpay_signature] => dff0421ba1ae58ec1b7e908e6ec43ccd5f77fdea6a977da75e075b45d0c819b0
+    [order_id] => 97
+)
+
+[09-Apr-2025 08:51:18 Europe/Berlin] Payment details fetched from Razorpay: Array
+(
+    [id] => pay_QGrlyKvv6gly6C
+    [entity] => payment
+    [amount] => 102500
+    [currency] => INR
+    [status] => captured
+    [order_id] => order_QGrlYnaY08PBy7
+    [invoice_id] => 
+    [international] => 
+    [method] => upi
+    [amount_refunded] => 0
+    [refund_status] => 
+    [captured] => 1
+    [description] => Payment for hahahah
+    [card_id] => 
+    [bank] => 
+    [wallet] => 
+    [vpa] => kuriakosealen29@oksbi
+    [email] => kuriakosealen29@gmail.com
+    [contact] => +918921536547
+    [notes] => Array
+        (
+        )
+
+    [fee] => 2420
+    [tax] => 370
+    [error_code] => 
+    [error_description] => 
+    [error_source] => 
+    [error_step] => 
+    [error_reason] => 
+    [acquirer_data] => Array
+        (
+            [rrn] => 178517761758
+            [upi_transaction_id] => 124D1304059887DC603E2CE5D58E7CB2
+        )
+
+    [created_at] => 1744181462
+    [upi] => Array
+        (
+            [vpa] => kuriakosealen29@oksbi
+        )
+
+)
+
+[09-Apr-2025 08:51:18 Europe/Berlin] Payment successfully processed and stored:
+[09-Apr-2025 08:51:18 Europe/Berlin] Payment ID: PAY17441814787812
+[09-Apr-2025 08:51:18 Europe/Berlin] Razorpay Payment ID: pay_QGrlyKvv6gly6C
+[09-Apr-2025 08:51:18 Europe/Berlin] Razorpay Order ID: order_QGrlYnaY08PBy7
+[09-Apr-2025 08:51:18 Europe/Berlin] Amount: 1025

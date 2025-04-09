@@ -386,6 +386,79 @@ include('header.php');
     .download-pdf-btn:hover {
         background-color: #45a049;
     }
+
+    /* Chat styles */
+    .chat-section {
+        margin-top: 30px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 15px;
+        background: #f9f9f9;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+
+    .message {
+        margin-bottom: 10px;
+        max-width: 80%;
+    }
+
+    .message.sent {
+        margin-left: auto;
+        background: #4CAF50;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 15px 15px 0 15px;
+    }
+
+    .message.received {
+        margin-right: auto;
+        background: #f0f0f0;
+        padding: 8px 12px;
+        border-radius: 15px 15px 15px 0;
+    }
+
+    .chat-input {
+        display: flex;
+        gap: 10px;
+    }
+
+    .chat-input input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        outline: none;
+    }
+
+    .chat-input button {
+        padding: 10px 20px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+    }
+
+    .chat-input button:hover {
+        background: #45a049;
+    }
 </style>
 
 <div class="order-container">
@@ -665,6 +738,20 @@ include('header.php');
             <i class="fas fa-arrow-right"></i>
             Continue Shopping
         </a>
+    </div>
+
+    <!-- Chat Section -->
+    <div class="chat-section">
+        <div class="chat-header">
+            <h3>Chat with Baker</h3>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will be loaded here -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
     </div>
 </div>
 
@@ -1004,6 +1091,75 @@ function updateWhatsNext(status, paymentStatus) {
 // Start the polling when the page loads
 document.addEventListener('DOMContentLoaded', function() {
     updateOrderStatus();
+});
+
+// Add this after your existing scripts
+let chatInterval = null;
+
+function loadMessages() {
+    fetch(`chat_api.php?order_id=<?php echo $order_id; ?>`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.messages) {
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                
+                data.messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.sender_id === <?php echo $user_id; ?> ? 'sent' : 'received'}`;
+                    messageDiv.textContent = message.message;
+                    chatMessages.appendChild(messageDiv);
+                });
+                
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        })
+        .catch(error => console.error('Error loading messages:', error));
+}
+
+function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    fetch('chat_api.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            order_id: <?php echo $order_id; ?>,
+            receiver_id: <?php echo $order['baker_id']; ?>,
+            message: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageInput.value = '';
+            loadMessages();
+        }
+    })
+    .catch(error => console.error('Error sending message:', error));
+}
+
+// Add event listener for Enter key in message input
+document.getElementById('messageInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        sendMessage();
+    }
+});
+
+// Load messages immediately and start polling
+loadMessages();
+chatInterval = setInterval(loadMessages, 5000);
+
+// Clean up interval when leaving the page
+window.addEventListener('beforeunload', function() {
+    if (chatInterval) {
+        clearInterval(chatInterval);
+    }
 });
 </script>
 
